@@ -7,6 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Services\User.Services.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Services\User.Services.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="EPPlus" Version="8.2.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
