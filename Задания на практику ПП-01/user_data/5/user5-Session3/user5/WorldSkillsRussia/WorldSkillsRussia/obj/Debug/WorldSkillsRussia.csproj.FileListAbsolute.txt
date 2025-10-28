@@ -1,0 +1,16 @@
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\bin\Debug\WorldSkillsRussia.exe.config
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\bin\Debug\WorldSkillsRussia.exe
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\bin\Debug\WorldSkillsRussia.pdb
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.csprojAssemblyReference.cache
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.FormAvtorizaciya.resources
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.Properties.Resources.resources
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.csproj.GenerateResource.cache
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.csproj.CoreCompileInputs.cache
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.exe
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.pdb
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.FormOrganizator.resources
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.FormSettingChamp.resources
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.FormExpert.resources
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.FormUchastnikiForOrganizator.resources
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.FormInfoUchastniki.resources
+C:\Users\bsn_user5\Desktop\AAA\user5\WorldSkillsRussia\WorldSkillsRussia\obj\Debug\WorldSkillsRussia.VozrastnCenzForm.resources

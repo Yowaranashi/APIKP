@@ -1,0 +1,151 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{EFF89A8D-07E2-40EA-AC9F-5F26D9FBB847}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>WorldSkillsRussia</RootNamespace>
+    <AssemblyName>WorldSkillsRussia</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DataBase.cs" />
+    <Compile Include="FormAvtorizaciya.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormAvtorizaciya.Designer.cs">
+      <DependentUpon>FormAvtorizaciya.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormExpert.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormExpert.Designer.cs">
+      <DependentUpon>FormExpert.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormInfoUchastniki.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormInfoUchastniki.Designer.cs">
+      <DependentUpon>FormInfoUchastniki.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormOrganizator.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormOrganizator.Designer.cs">
+      <DependentUpon>FormOrganizator.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormSettingChamp.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormSettingChamp.Designer.cs">
+      <DependentUpon>FormSettingChamp.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormUchastnikiForOrganizator.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormUchastnikiForOrganizator.Designer.cs">
+      <DependentUpon>FormUchastnikiForOrganizator.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VozrastnCenzForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="VozrastnCenzForm.Designer.cs">
+      <DependentUpon>VozrastnCenzForm.cs</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="FormAvtorizaciya.resx">
+      <DependentUpon>FormAvtorizaciya.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormExpert.resx">
+      <DependentUpon>FormExpert.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormInfoUchastniki.resx">
+      <DependentUpon>FormInfoUchastniki.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormOrganizator.resx">
+      <DependentUpon>FormOrganizator.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormSettingChamp.resx">
+      <DependentUpon>FormSettingChamp.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormUchastnikiForOrganizator.resx">
+      <DependentUpon>FormUchastnikiForOrganizator.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="VozrastnCenzForm.resx">
+      <DependentUpon>VozrastnCenzForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\wsht-red1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\wsht-red.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\wsht-red2.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\wsrlogo-Red.png" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
