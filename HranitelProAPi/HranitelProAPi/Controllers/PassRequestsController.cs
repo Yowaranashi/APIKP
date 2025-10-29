@@ -14,8 +14,9 @@ namespace HranitelPRO.API.Controllers
     [Route("api/[controller]")]
     public class PassRequestsController : ControllerBase
     {
-        private static readonly string BlacklistAutoReason =
-            "Заявка на посещение объекта КИИ отклонена в связи с нарушением Федерального закона от 26.07.2017 № 187-ФЗ «О безопасности критической информационной инфраструктуры Российской Федерации».";
+        private const string BlacklistAutoReason =
+            "Заявка на посещение объекта КИИ отклонена в связи с нарушением Федерального закона от 26.07.2017 № 187-ФЗ «О безопасно"
+            + "сти критической информационной инфраструктуры Российской Федерации».";
 
         private readonly HranitelContext _context;
 
@@ -27,43 +28,44 @@ namespace HranitelPRO.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PassRequestSummaryDto>>> Get([FromQuery] PassRequestQuery query)
         {
-            var requestsQuery = _context.PassRequests
+            var baseQuery = _context.PassRequests
                 .AsNoTracking()
-                .Include(p => p.Department)
-                .Include(p => p.ResponsibleEmployee)
-                .Include(p => p.StatusRef)
-                .Include(p => p.Visitors);
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query.Status))
             {
                 var statusValue = query.Status.Trim();
-                requestsQuery = requestsQuery.Where(p => p.Status == statusValue || p.StatusRef.StatusName == statusValue);
+                baseQuery = baseQuery.Where(p => p.Status == statusValue || p.StatusRef.StatusName == statusValue);
             }
 
             if (query.DepartmentId.HasValue)
             {
-                requestsQuery = requestsQuery.Where(p => p.DepartmentId == query.DepartmentId.Value);
+                baseQuery = baseQuery.Where(p => p.DepartmentId == query.DepartmentId.Value);
             }
 
             if (!string.IsNullOrWhiteSpace(query.RequestType))
             {
                 var type = query.RequestType.Trim();
-                requestsQuery = requestsQuery.Where(p => p.RequestType == type);
+                baseQuery = baseQuery.Where(p => p.RequestType == type);
             }
 
             if (query.DateFrom.HasValue)
             {
                 var from = query.DateFrom.Value.Date;
-                requestsQuery = requestsQuery.Where(p => p.StartDate.Date >= from);
+                baseQuery = baseQuery.Where(p => p.StartDate.Date >= from);
             }
 
             if (query.DateTo.HasValue)
             {
                 var to = query.DateTo.Value.Date;
-                requestsQuery = requestsQuery.Where(p => p.EndDate.Date <= to);
+                baseQuery = baseQuery.Where(p => p.EndDate.Date <= to);
             }
 
-            var requests = await requestsQuery
+            var requests = await baseQuery
+                .Include(p => p.Department)
+                .Include(p => p.ResponsibleEmployee)
+                .Include(p => p.StatusRef)
+                .Include(p => p.Visitors)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
 

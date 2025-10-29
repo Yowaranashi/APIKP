@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text;
 using HranitelPro.API.Data;
 using HranitelPRO.API.Services;
@@ -64,10 +65,12 @@ internal class Program
 
         app.UseCors("AllowAll");
 
+        var uploadsFolder = Path.Combine(builder.Environment.ContentRootPath, "Uploads");
+        Directory.CreateDirectory(uploadsFolder);
+
         app.UseStaticFiles(new StaticFileOptions
         {
-            FileProvider = new PhysicalFileProvider(
-                Path.Combine(Directory.GetCurrentDirectory(), "Uploads")),
+            FileProvider = new PhysicalFileProvider(uploadsFolder),
             RequestPath = "/uploads"
         });
 
