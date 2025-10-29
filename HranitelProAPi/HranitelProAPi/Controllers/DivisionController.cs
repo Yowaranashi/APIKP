@@ -1,83 +1,179 @@
-﻿using Microsoft.AspNetCore.Http;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using HranitelPro.API.Data;
+using HranitelPRO.API.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
-namespace HranitelProAPi.Controllers
+namespace HranitelPRO.API.Controllers
 {
-    public class DivisionController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class DivisionController : ControllerBase
     {
-        // GET: DivisionController
-        public ActionResult Index()
+        private readonly HranitelContext _context;
+
+        public DivisionController(HranitelContext context)
         {
-            return View();
+            _context = context;
         }
 
-        // GET: DivisionController/Details/5
-        public ActionResult Details(int id)
+        [HttpGet("requests")]
+        public async Task<ActionResult<IEnumerable<DivisionRequestDto>>> GetRequests([FromQuery] DivisionRequestQuery query)
         {
-            return View();
-        }
-
-        // GET: DivisionController/Create
-        public ActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: DivisionController/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
-        {
-            try
+            if (!query.DepartmentId.HasValue)
             {
-                return RedirectToAction(nameof(Index));
+                return BadRequest(new { message = "Не указан идентификатор подразделения" });
             }
-            catch
+
+            var requests = await _context.PassRequests
+                .AsNoTracking()
+                .Include(r => r.Visitors)
+                .Include(r => r.VisitRecords)
+                .Where(r => r.DepartmentId == query.DepartmentId.Value &&
+                            (r.Status == "Approved" || r.Status == "InProgress"))
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            var result = requests.Select(r => new DivisionRequestDto
             {
-                return View();
-            }
+                Id = r.Id,
+                Status = r.Status,
+                StartDate = r.StartDate,
+                EndDate = r.EndDate,
+                Purpose = r.Purpose,
+                Visitors = r.Visitors?.Select(v => new DivisionVisitorDto
+                {
+                    Id = v.Id,
+                    FullName = string.Join(" ", new[] { v.LastName, v.FirstName, v.MiddleName }.Where(s => !string.IsNullOrEmpty(s))),
+                    PassportSeries = v.PassportSeries,
+                    PassportNumber = v.PassportNumber,
+                    EntryTime = r.VisitRecords?.FirstOrDefault(rec => rec.VisitorId == v.Id)?.EntryTime,
+                    ExitTime = r.VisitRecords?.FirstOrDefault(rec => rec.VisitorId == v.Id)?.ExitTime
+                }).ToList() ?? new List<DivisionVisitorDto>()
+            });
+
+            return Ok(result);
         }
 
-        // GET: DivisionController/Edit/5
-        public ActionResult Edit(int id)
+        [HttpPost("requests/{id:int}/visit")]
+        public async Task<ActionResult> UpdateVisit(int id, [FromBody] DivisionVisitUpdateDto dto)
         {
-            return View();
+            var request = await _context.PassRequests
+                .Include(r => r.VisitRecords)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (request == null)
+            {
+                return NotFound(new { message = "Заявка не найдена" });
+            }
+
+            foreach (var update in dto.Visitors)
+            {
+                var record = request.VisitRecords?.FirstOrDefault(r => r.VisitorId == update.VisitorId);
+                if (record == null)
+                {
+                    record = new VisitRecord
+                    {
+                        PassRequestId = id,
+                        VisitorId = update.VisitorId,
+                        DepartmentId = request.DepartmentId
+                    };
+                    _context.VisitRecords.Add(record);
+                }
+
+                if (update.EntryTime.HasValue)
+                {
+                    record.EntryTime = update.EntryTime;
+                }
+
+                if (update.ExitTime.HasValue)
+                {
+                    record.ExitTime = update.ExitTime;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
 
-        // POST: DivisionController/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        [HttpPost("visitors/{visitorId:int}/blacklist")]
+        public async Task<ActionResult> AddToBlacklist(int visitorId, [FromBody] DivisionBlacklistDto dto)
         {
-            try
+            var visitor = await _context.PassVisitors.FirstOrDefaultAsync(v => v.Id == visitorId);
+            if (visitor == null)
             {
-                return RedirectToAction(nameof(Index));
+                return NotFound(new { message = "Посетитель не найден" });
             }
-            catch
-            {
-                return View();
-            }
-        }
 
-        // GET: DivisionController/Delete/5
-        public ActionResult Delete(int id)
-        {
-            return View();
-        }
+            if (string.IsNullOrWhiteSpace(dto.Reason))
+            {
+                return BadRequest(new { message = "Необходимо указать причину" });
+            }
 
-        // POST: DivisionController/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
-        {
-            try
+            var entry = new BlacklistEntry
             {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
+                LastName = visitor.LastName,
+                FirstName = visitor.FirstName,
+                MiddleName = visitor.MiddleName,
+                PassportSeries = visitor.PassportSeries,
+                PassportNumber = visitor.PassportNumber,
+                Reason = dto.Reason,
+                AddedByEmployeeId = dto.EmployeeId,
+                AddedAt = DateTime.UtcNow
+            };
+
+            _context.BlacklistEntries.Add(entry);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { entry.Id });
         }
+    }
+
+    public class DivisionRequestQuery
+    {
+        public int? DepartmentId { get; set; }
+    }
+
+    public class DivisionRequestDto
+    {
+        public int Id { get; set; }
+        public string Status { get; set; } = null!;
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public string Purpose { get; set; } = null!;
+        public List<DivisionVisitorDto> Visitors { get; set; } = new();
+    }
+
+    public class DivisionVisitorDto
+    {
+        public int Id { get; set; }
+        public string FullName { get; set; } = null!;
+        public string PassportSeries { get; set; } = null!;
+        public string PassportNumber { get; set; } = null!;
+        public DateTime? EntryTime { get; set; }
+        public DateTime? ExitTime { get; set; }
+    }
+
+    public class DivisionVisitUpdateDto
+    {
+        public List<DivisionVisitorUpdateDto> Visitors { get; set; } = new();
+    }
+
+    public class DivisionVisitorUpdateDto
+    {
+        public int VisitorId { get; set; }
+        public DateTime? EntryTime { get; set; }
+        public DateTime? ExitTime { get; set; }
+    }
+
+    public class DivisionBlacklistDto
+    {
+        public int? EmployeeId { get; set; }
+        public string Reason { get; set; } = null!;
     }
 }

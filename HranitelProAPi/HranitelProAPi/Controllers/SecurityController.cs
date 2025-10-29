@@ -1,82 +1,65 @@
-﻿using Microsoft.AspNetCore.Http;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using HranitelPRO.API.Contracts;
+using HranitelPRO.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace HranitelProAPi.Controllers
+namespace HranitelPRO.API.Controllers
 {
-    public class SecurityController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class SecurityController : ControllerBase
     {
-        // GET: SecurityController
-        public ActionResult Index()
+        private readonly ISecurityWorkflowService _workflowService;
+
+        public SecurityController(ISecurityWorkflowService workflowService)
         {
-            return View();
+            _workflowService = workflowService;
         }
 
-        // GET: SecurityController/Details/5
-        public ActionResult Details(int id)
+        [HttpGet("requests")]
+        public async Task<ActionResult<IEnumerable<SecurityRequestDto>>> GetApprovedRequests([FromQuery] SecurityQuery query)
         {
-            return View();
+            var requests = await _workflowService.GetApprovedRequestsAsync(query);
+            return Ok(requests);
         }
 
-        // GET: SecurityController/Create
-        public ActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: SecurityController/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
+        [HttpPost("requests/{id:int}/allow")]
+        public async Task<ActionResult> AllowAccess(int id, [FromBody] SecurityAccessDto dto)
         {
             try
             {
-                return RedirectToAction(nameof(Index));
+                await _workflowService.AllowAccessAsync(id, dto);
+                return NoContent();
             }
-            catch
+            catch (KeyNotFoundException ex)
             {
-                return View();
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 
-        // GET: SecurityController/Edit/5
-        public ActionResult Edit(int id)
-        {
-            return View();
-        }
-
-        // POST: SecurityController/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        [HttpPost("requests/{id:int}/complete")]
+        public async Task<ActionResult> CompleteVisit(int id, [FromBody] SecurityCompleteDto dto)
         {
             try
             {
-                return RedirectToAction(nameof(Index));
+                var completed = await _workflowService.CompleteVisitAsync(id, dto);
+                return Ok(new { completed });
             }
-            catch
+            catch (KeyNotFoundException ex)
             {
-                return View();
+                return NotFound(new { message = ex.Message });
             }
-        }
-
-        // GET: SecurityController/Delete/5
-        public ActionResult Delete(int id)
-        {
-            return View();
-        }
-
-        // POST: SecurityController/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
-        {
-            try
+            catch (InvalidOperationException ex)
             {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
+                return BadRequest(new { message = ex.Message });
             }
         }
     }

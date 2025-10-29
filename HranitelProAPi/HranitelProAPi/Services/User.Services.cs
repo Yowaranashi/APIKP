@@ -1,3 +1,4 @@
+using HranitelPro.API.Data;
 using HranitelPRO.API.Models;
 using Microsoft.EntityFrameworkCore;
 
