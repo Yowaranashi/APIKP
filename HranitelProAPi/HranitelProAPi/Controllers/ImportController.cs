@@ -20,29 +20,34 @@ namespace HranitelPRO.API.Controllers
         [HttpPost("visitors")]
         [Authorize]
         [RequestSizeLimit(10 * 1024 * 1024)]
-        public async Task<ActionResult> ImportVisitors([FromForm] IFormFile file)
+        public async Task<ActionResult> ImportVisitors([FromForm] FileUploadDto request)
         {
-            if (file == null || file.Length == 0)
+            if (request.File == null || request.File.Length == 0)
             {
                 return BadRequest(new { message = "Файл не найден" });
             }
 
-            var imported = await _importService.ImportVisitorsAsync(file);
+            var imported = await _importService.ImportVisitorsAsync(request.File);
             return Ok(new { imported });
         }
 
         [HttpPost("employees")]
         [Authorize]
         [RequestSizeLimit(10 * 1024 * 1024)]
-        public async Task<ActionResult> ImportEmployees([FromForm] IFormFile file)
+        public async Task<ActionResult> ImportEmployees([FromForm] FileUploadDto request)
         {
-            if (file == null || file.Length == 0)
+            if (request.File == null || request.File.Length == 0)
             {
                 return BadRequest(new { message = "Файл не найден" });
             }
 
-            var imported = await _importService.ImportEmployeesAsync(file);
+            var imported = await _importService.ImportEmployeesAsync(request.File);
             return Ok(new { imported });
         }
+    }
+
+    public class FileUploadDto
+    {
+        public IFormFile? File { get; set; }
     }
 }
