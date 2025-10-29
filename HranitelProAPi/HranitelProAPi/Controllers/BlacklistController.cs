@@ -1,83 +1,122 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using HranitelPro.API.Data;
+using HranitelPRO.API.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
-namespace HranitelProAPi.Controllers
+namespace HranitelPRO.API.Controllers
 {
-    public class BlacklistController : Controller
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize] // требует JWT токен
+    public class BlacklistController : ControllerBase
     {
-        // GET: BlacklistController
-        public ActionResult Index()
+        private readonly HranitelContext _context;
+
+        public BlacklistController(HranitelContext context)
         {
-            return View();
+            _context = context;
         }
 
-        // GET: BlacklistController/Details/5
-        public ActionResult Details(int id)
+        // GET: api/blacklist
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<BlacklistEntry>>> GetAll()
         {
-            return View();
+            var entries = await _context.BlacklistEntries
+                .Include(b => b.AddedByEmployee)
+                .ToListAsync();
+
+            return Ok(entries);
         }
 
-        // GET: BlacklistController/Create
-        public ActionResult Create()
+        // GET: api/blacklist/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<BlacklistEntry>> Get(int id)
         {
-            return View();
+            var entry = await _context.BlacklistEntries
+                .Include(b => b.AddedByEmployee)
+                .FirstOrDefaultAsync(b => b.Id == id);
+
+            if (entry == null)
+                return NotFound(new { message = "Запись не найдена" });
+
+            return Ok(entry);
         }
 
-        // POST: BlacklistController/Create
+        // POST: api/blacklist
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
+        public async Task<ActionResult> Add([FromBody] BlacklistCreateDto dto)
         {
-            try
+            if (string.IsNullOrWhiteSpace(dto.LastName) || string.IsNullOrWhiteSpace(dto.FirstName))
+                return BadRequest(new { message = "Имя и фамилия обязательны" });
+
+            var entry = new BlacklistEntry
             {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
+                LastName = dto.LastName,
+                FirstName = dto.FirstName,
+                MiddleName = dto.MiddleName,
+                PassportSeries = dto.PassportSeries,
+                PassportNumber = dto.PassportNumber,
+                Reason = dto.Reason,
+                AddedByEmployeeId = dto.AddedByEmployeeId,
+                AddedAt = DateTime.UtcNow
+            };
+
+            _context.BlacklistEntries.Add(entry);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(Get), new { id = entry.Id }, entry);
         }
 
-        // GET: BlacklistController/Edit/5
-        public ActionResult Edit(int id)
+        // PUT: api/blacklist/5
+        [HttpPut("{id}")]
+        public async Task<ActionResult> Update(int id, [FromBody] BlacklistUpdateDto dto)
         {
-            return View();
+            var entry = await _context.BlacklistEntries.FindAsync(id);
+            if (entry == null)
+                return NotFound(new { message = "Запись не найдена" });
+
+            entry.Reason = dto.Reason ?? entry.Reason;
+            entry.PassportSeries = dto.PassportSeries ?? entry.PassportSeries;
+            entry.PassportNumber = dto.PassportNumber ?? entry.PassportNumber;
+            entry.AddedByEmployeeId = dto.AddedByEmployeeId ?? entry.AddedByEmployeeId;
+
+            await _context.SaveChangesAsync();
+            return Ok(entry);
         }
 
-        // POST: BlacklistController/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        // DELETE: api/blacklist/5
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> Delete(int id)
         {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
+            var entry = await _context.BlacklistEntries.FindAsync(id);
+            if (entry == null)
+                return NotFound(new { message = "Запись не найдена" });
 
-        // GET: BlacklistController/Delete/5
-        public ActionResult Delete(int id)
-        {
-            return View();
-        }
+            _context.BlacklistEntries.Remove(entry);
+            await _context.SaveChangesAsync();
 
-        // POST: BlacklistController/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
-        {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
+            return NoContent();
         }
+    }
+
+    // DTOs
+    public class BlacklistCreateDto
+    {
+        public string LastName { get; set; } = null!;
+        public string FirstName { get; set; } = null!;
+        public string? MiddleName { get; set; }
+        public string? PassportSeries { get; set; }
+        public string? PassportNumber { get; set; }
+        public string Reason { get; set; } = null!;
+        public int? AddedByEmployeeId { get; set; }
+    }
+
+    public class BlacklistUpdateDto
+    {
+        public string? PassportSeries { get; set; }
+        public string? PassportNumber { get; set; }
+        public string? Reason { get; set; }
+        public int? AddedByEmployeeId { get; set; }
     }
 }
