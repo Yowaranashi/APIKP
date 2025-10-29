@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using ConsultationScheduler;
 using HranitelPro.API.Data;
 using HranitelPRO.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,6 +22,7 @@ internal class Program
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IExcelImportService, ExcelImportService>();
         builder.Services.AddScoped<ISecurityWorkflowService, SecurityWorkflowService>();
+        builder.Services.AddSingleton<AvailabilityPlanner>();
 
         // Controllers & API discoverability
         builder.Services.AddControllers();
