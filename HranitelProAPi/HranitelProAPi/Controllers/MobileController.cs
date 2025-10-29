@@ -118,7 +118,7 @@ namespace HranitelPRO.API.Controllers
                 await file.CopyToAsync(stream);
             }
 
-            visitor.PhotoPath = Path.Combine("uploads", "mobile", fileName).Replace('\', '/');
+            visitor.PhotoPath = Path.Combine("uploads", "mobile", fileName).Replace('\\', '/');
             await _context.SaveChangesAsync();
 
             return Ok(new { photo = visitor.PhotoPath });
