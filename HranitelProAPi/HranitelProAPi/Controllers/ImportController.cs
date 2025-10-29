@@ -1,83 +1,48 @@
-﻿using Microsoft.AspNetCore.Http;
+using System.Threading.Tasks;
+using HranitelPRO.API.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace HranitelProAPi.Controllers
+namespace HranitelPRO.API.Controllers
 {
-    public class ImportController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ImportController : ControllerBase
     {
-        // GET: ImportController
-        public ActionResult Index()
+        private readonly IExcelImportService _importService;
+
+        public ImportController(IExcelImportService importService)
         {
-            return View();
+            _importService = importService;
         }
 
-        // GET: ImportController/Details/5
-        public ActionResult Details(int id)
+        [HttpPost("visitors")]
+        [Authorize]
+        [RequestSizeLimit(10 * 1024 * 1024)]
+        public async Task<ActionResult> ImportVisitors([FromForm] IFormFile file)
         {
-            return View();
-        }
-
-        // GET: ImportController/Create
-        public ActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: ImportController/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
-        {
-            try
+            if (file == null || file.Length == 0)
             {
-                return RedirectToAction(nameof(Index));
+                return BadRequest(new { message = "Файл не найден" });
             }
-            catch
-            {
-                return View();
-            }
+
+            var imported = await _importService.ImportVisitorsAsync(file);
+            return Ok(new { imported });
         }
 
-        // GET: ImportController/Edit/5
-        public ActionResult Edit(int id)
+        [HttpPost("employees")]
+        [Authorize]
+        [RequestSizeLimit(10 * 1024 * 1024)]
+        public async Task<ActionResult> ImportEmployees([FromForm] IFormFile file)
         {
-            return View();
-        }
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { message = "Файл не найден" });
+            }
 
-        // POST: ImportController/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
-        {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
-
-        // GET: ImportController/Delete/5
-        public ActionResult Delete(int id)
-        {
-            return View();
-        }
-
-        // POST: ImportController/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
-        {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
+            var imported = await _importService.ImportEmployeesAsync(file);
+            return Ok(new { imported });
         }
     }
 }

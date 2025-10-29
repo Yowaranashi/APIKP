@@ -1,83 +1,135 @@
-﻿using Microsoft.AspNetCore.Http;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using HranitelPro.API.Data;
+using HranitelPRO.API.Contracts;
+using HranitelPRO.API.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
-namespace HranitelProAPi.Controllers
+namespace HranitelPRO.API.Controllers
 {
-    public class MobileController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class MobileController : ControllerBase
     {
-        // GET: MobileController
-        public ActionResult Index()
+        private readonly ISecurityWorkflowService _workflowService;
+        private readonly HranitelContext _context;
+
+        public MobileController(ISecurityWorkflowService workflowService, HranitelContext context)
         {
-            return View();
+            _workflowService = workflowService;
+            _context = context;
         }
 
-        // GET: MobileController/Details/5
-        public ActionResult Details(int id)
+        [HttpGet("profile/{employeeCode}")]
+        public async Task<ActionResult<MobileProfileDto>> GetProfile(string employeeCode)
         {
-            return View();
+            var employee = await _context.Employees
+                .AsNoTracking()
+                .Include(e => e.Department)
+                .FirstOrDefaultAsync(e => e.EmployeeCode == employeeCode);
+
+            if (employee == null)
+            {
+                return NotFound(new { message = "Сотрудник не найден" });
+            }
+
+            return Ok(new MobileProfileDto
+            {
+                EmployeeId = employee.Id,
+                FullName = employee.FullName,
+                DepartmentId = employee.DepartmentId,
+                DepartmentName = employee.Department?.Name
+            });
         }
 
-        // GET: MobileController/Create
-        public ActionResult Create()
+        [HttpGet("requests")]
+        public async Task<ActionResult<IEnumerable<SecurityRequestDto>>> GetRequests([FromQuery] SecurityQuery query)
         {
-            return View();
+            var requests = await _workflowService.GetApprovedRequestsAsync(query);
+            return Ok(requests);
         }
 
-        // POST: MobileController/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
+        [HttpPost("requests/{id:int}/allow")]
+        public async Task<ActionResult> Allow(int id, [FromBody] SecurityAccessDto dto)
         {
             try
             {
-                return RedirectToAction(nameof(Index));
+                await _workflowService.AllowAccessAsync(id, dto);
+                return NoContent();
             }
-            catch
+            catch (KeyNotFoundException ex)
             {
-                return View();
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 
-        // GET: MobileController/Edit/5
-        public ActionResult Edit(int id)
-        {
-            return View();
-        }
-
-        // POST: MobileController/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        [HttpPost("requests/{id:int}/checkout")]
+        public async Task<ActionResult> Checkout(int id, [FromBody] SecurityCompleteDto dto)
         {
             try
             {
-                return RedirectToAction(nameof(Index));
+                var completed = await _workflowService.CompleteVisitAsync(id, dto);
+                return Ok(new { completed });
             }
-            catch
+            catch (KeyNotFoundException ex)
             {
-                return View();
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 
-        // GET: MobileController/Delete/5
-        public ActionResult Delete(int id)
+        [HttpPost("visitors/{visitorId:int}/photo")]
+        [RequestSizeLimit(5 * 1024 * 1024)]
+        public async Task<ActionResult> UploadVisitorPhoto(int visitorId, IFormFile file)
         {
-            return View();
-        }
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { message = "Файл не найден" });
+            }
 
-        // POST: MobileController/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
-        {
-            try
+            var visitor = await _context.PassVisitors.FirstOrDefaultAsync(v => v.Id == visitorId);
+            if (visitor == null)
             {
-                return RedirectToAction(nameof(Index));
+                return NotFound(new { message = "Посетитель не найден" });
             }
-            catch
+
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", "mobile");
+            Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = $"visitor_{visitorId}_{Guid.NewGuid():N}{Path.GetExtension(file.FileName)}";
+            var path = Path.Combine(uploadsFolder, fileName);
+
+            await using (var stream = System.IO.File.Create(path))
             {
-                return View();
+                await file.CopyToAsync(stream);
             }
+
+            visitor.PhotoPath = Path.Combine("uploads", "mobile", fileName).Replace('\', '/');
+            await _context.SaveChangesAsync();
+
+            return Ok(new { photo = visitor.PhotoPath });
         }
+    }
+
+    public class MobileProfileDto
+    {
+        public int EmployeeId { get; set; }
+        public string FullName { get; set; } = null!;
+        public int? DepartmentId { get; set; }
+        public string? DepartmentName { get; set; }
     }
 }
