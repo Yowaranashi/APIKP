@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using HranitelPRO.API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -44,10 +45,35 @@ namespace HranitelPRO.API.Controllers
             var imported = await _importService.ImportEmployeesAsync(request.File);
             return Ok(new { imported });
         }
+
+        [HttpPost("sessions")]
+        [Authorize]
+        [RequestSizeLimit(50 * 1024 * 1024)]
+        public async Task<ActionResult> ImportSessions([FromForm] SessionImportDto request)
+        {
+            if (request.Excel == null || request.Excel.Length == 0)
+            {
+                return BadRequest(new { message = "Excel-файл не найден" });
+            }
+
+            var result = await _importService.ImportSessionsAsync(new SessionImportOptions
+            {
+                ExcelFile = request.Excel,
+                Attachments = request.Attachments ?? Array.Empty<IFormFile>()
+            });
+
+            return Ok(result);
+        }
     }
 
     public class FileUploadDto
     {
         public IFormFile? File { get; set; }
+    }
+
+    public class SessionImportDto
+    {
+        public IFormFile? Excel { get; set; }
+        public List<IFormFile>? Attachments { get; set; }
     }
 }

@@ -81,6 +81,12 @@ namespace HranitelPro.API.Data
                 .HasForeignKey(f => f.PassVisitorId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<FileAttachment>()
+                .HasOne(f => f.Department)
+                .WithMany(d => d.Attachments)
+                .HasForeignKey(f => f.DepartmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             // BlacklistEntry added by employee
             modelBuilder.Entity<BlacklistEntry>()
                 .HasOne(b => b.AddedByEmployee)
