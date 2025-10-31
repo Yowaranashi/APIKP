@@ -153,9 +153,11 @@ CREATE TABLE AttachedFile (
     FileTypeID INT NOT NULL,
     VisitorID INT NULL,
     ApplicationID INT NULL,
+    DepartmentID INT NULL,
     FOREIGN KEY (FileTypeID) REFERENCES FileType(FileTypeID),
     FOREIGN KEY (VisitorID) REFERENCES Visitor(VisitorID),
-    FOREIGN KEY (ApplicationID) REFERENCES Application(ApplicationID)
+    FOREIGN KEY (ApplicationID) REFERENCES Application(ApplicationID),
+    FOREIGN KEY (DepartmentID) REFERENCES Department(DepartmentID)
 );
 
 ------------------------------------------------------------
