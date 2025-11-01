@@ -4,8 +4,8 @@ import { AuthResponse } from '../types';
 export interface RegisterPayload {
   email: string;
   password: string;
-  confirmPassword: string;
   fullName: string;
+  roleId: number;
 }
 
 export interface LoginPayload {
@@ -13,8 +13,12 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface RegisterResponse {
+  message: string;
+}
+
 export const register = async (payload: RegisterPayload) => {
-  const { data } = await axiosClient.post<AuthResponse>('/api/auth/register', payload);
+  const { data } = await axiosClient.post<RegisterResponse>('/api/auth/register', payload);
   return data;
 };
 

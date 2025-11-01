@@ -1,9 +1,10 @@
 export type ApplicationType = 'personal' | 'group';
 
 export interface User {
-  id: string;
+  id: number;
   email: string;
   fullName: string;
+  role: string;
 }
 
 export interface Department {

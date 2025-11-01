@@ -69,9 +69,9 @@ export const submitApplication = async (payload: ApplicationPayload) => {
   return data;
 };
 
-export const getUserApplications = async (userId: string) => {
+export const getUserApplications = async (userId: number) => {
   const { data } = await axiosClient.get<Application[]>(`/api/applications`, {
-    params: { userId },
+    params: { userId: userId.toString() },
   });
   return data;
 };

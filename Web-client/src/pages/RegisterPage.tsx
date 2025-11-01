@@ -13,9 +13,11 @@ interface RegisterFormValues {
   confirmPassword: string;
 }
 
+const DEFAULT_ROLE_ID = 1; // роль "Guest" по умолчанию
+
 const schema = yup.object({
-  email: yup.string().email('Введите корректный email').required('Email обязателен'),
-  fullName: yup.string().required('Укажите ФИО'),
+  email: yup.string().trim().email('Введите корректный email').required('Email обязателен'),
+  fullName: yup.string().trim().required('Укажите ФИО'),
   password: yup
     .string()
     .required('Введите пароль')
@@ -35,7 +37,13 @@ export const RegisterPage = () => {
 
   const onSubmit = async (values: RegisterFormValues) => {
     try {
-      await registerUser(values);
+      await registerUser({
+        email: values.email,
+        fullName: values.fullName.trim(),
+        password: values.password,
+        roleId: DEFAULT_ROLE_ID,
+      });
+
       navigate('/dashboard');
     } catch (error) {
       // Ошибка уже показана пользователю
