@@ -47,6 +47,7 @@ namespace HranitelPRO.API.Models
         public string? Description { get; set; }
         public ICollection<Employee>? Employees { get; set; }
         public ICollection<PassRequest>? PassRequests { get; set; }
+        public ICollection<FileAttachment>? Attachments { get; set; }
     }
 
     public class PassRequest
@@ -229,6 +230,8 @@ namespace HranitelPRO.API.Models
         public PassRequest? PassRequest { get; set; }
         public int? PassVisitorId { get; set; }
         public PassVisitor? PassVisitor { get; set; }
+        public int? DepartmentId { get; set; }
+        public Department? Department { get; set; }
         public int FileTypeID { get; set; }
         public FileType FileType { get; set; } = null!;
         [Required, MaxLength(500)]
