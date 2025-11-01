@@ -43,6 +43,7 @@ export const RegisterPage = () => {
         password: values.password,
         roleId: DEFAULT_ROLE_ID,
       });
+
       navigate('/dashboard');
     } catch (error) {
       // Ошибка уже показана пользователю

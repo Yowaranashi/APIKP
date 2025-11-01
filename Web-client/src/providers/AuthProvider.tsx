@@ -72,6 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await authApi.register(payload);
       const authData = await authApi.login({ email: payload.email, password: payload.password });
       handleAuthSuccess(authData);
+
       toast.success('Регистрация прошла успешно!');
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Регистрация не удалась.';

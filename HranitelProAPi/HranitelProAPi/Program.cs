@@ -75,8 +75,10 @@ internal class Program
             FileProvider = new PhysicalFileProvider(uploadsFolder),
             RequestPath = "/uploads"
         });
-
-        app.UseHttpsRedirection();
+        if (!app.Environment.IsProduction())
+        {
+            app.UseHttpsRedirection();
+        }
         app.UseAuthentication();
         app.UseAuthorization();
 
