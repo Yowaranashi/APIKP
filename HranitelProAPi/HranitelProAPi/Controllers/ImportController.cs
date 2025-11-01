@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using HranitelPRO.API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -59,7 +60,8 @@ namespace HranitelPRO.API.Controllers
             var result = await _importService.ImportSessionsAsync(new SessionImportOptions
             {
                 ExcelFile = request.Excel,
-                Attachments = request.Attachments ?? Array.Empty<IFormFile>()
+                Attachments = request.Attachments?.ToArray() ?? Array.Empty<IFormFile>()
+
             });
 
             return Ok(result);
