@@ -1,0 +1,71 @@
+# Примеры HTTP-запросов для импорта сессий (1-3) из Excel
+# Требуется авторизационный токен Bearer и доступ к эндпоинту POST /api/import/sessions
+
+### Импорт сессии 1
+# curl -X POST http://localhost:5000/api/import/sessions \
+#   -H "Authorization: Bearer <JWT_TOKEN>" \
+#   -F "excel=@data/session-1.xlsx" \
+#   -F "attachments=@data/building-1-photo.jpg" \
+#   -F "attachments=@data/building-1-passport.pdf"
+POST http://localhost:5000/api/import/sessions
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: multipart/form-data; boundary=import
+
+--import
+Content-Disposition: form-data; name="excel"; filename="session-1.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ./data/session-1.xlsx
+--import
+Content-Disposition: form-data; name="attachments"; filename="building-1-photo.jpg"
+Content-Type: image/jpeg
+
+< ./data/building-1-photo.jpg
+--import
+Content-Disposition: form-data; name="attachments"; filename="building-1-passport.pdf"
+Content-Type: application/pdf
+
+< ./data/building-1-passport.pdf
+--import--
+
+### Импорт сессии 2
+# curl -X POST http://localhost:5000/api/import/sessions \
+#   -H "Authorization: Bearer <JWT_TOKEN>" \
+#   -F "excel=@data/session-2.xlsx" \
+#   -F "attachments=@data/building-2-photo.png"
+POST http://localhost:5000/api/import/sessions
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: multipart/form-data; boundary=import
+
+--import
+Content-Disposition: form-data; name="excel"; filename="session-2.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ./data/session-2.xlsx
+--import
+Content-Disposition: form-data; name="attachments"; filename="building-2-photo.png"
+Content-Type: image/png
+
+< ./data/building-2-photo.png
+--import--
+
+### Импорт сессии 3
+# curl -X POST http://localhost:5000/api/import/sessions \
+#   -H "Authorization: Bearer <JWT_TOKEN>" \
+#   -F "excel=@data/session-3.xlsx" \
+#   -F "attachments=@data/building-3-passport.pdf"
+POST http://localhost:5000/api/import/sessions
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: multipart/form-data; boundary=import
+
+--import
+Content-Disposition: form-data; name="excel"; filename="session-3.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ./data/session-3.xlsx
+--import
+Content-Disposition: form-data; name="attachments"; filename="building-3-passport.pdf"
+Content-Type: application/pdf
+
+< ./data/building-3-passport.pdf
+--import--

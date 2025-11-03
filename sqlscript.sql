@@ -219,7 +219,7 @@ CREATE TABLE AuditLogs (
     Action NVARCHAR(200) NOT NULL,
     Details NVARCHAR(4000) NULL,
     FOREIGN KEY (UserId) REFERENCES Users(Id)
-);
+
 
 ------------------------------------------------------------
 -- 7. Configuration and templates
