@@ -153,6 +153,12 @@ export const ApplicationFormPersonal = () => {
     }
 
     try {
+      const applicantParticipant = {
+        fullName: values.applicantName,
+        birthDate: values.applicantBirthDate,
+        passport: values.applicantPassport,
+      };
+
       await submitApplication({
         type: 'personal',
         startDate: values.startDate,
@@ -162,12 +168,15 @@ export const ApplicationFormPersonal = () => {
         employeeId: values.employeeId,
         applicantName: values.applicantName,
         applicantPhone: values.applicantPhone,
+        applicantEmail: user?.email || undefined,
         applicantBirthDate: values.applicantBirthDate,
         applicantPassport: values.applicantPassport,
+        applicantUserId: user?.id,
         files: {
           photo: values.photo || undefined,
           passport: values.passportFile || undefined,
         },
+        participants: [applicantParticipant],
       });
       toast.success('Заявка отправлена на рассмотрение');
       navigate('/dashboard');
