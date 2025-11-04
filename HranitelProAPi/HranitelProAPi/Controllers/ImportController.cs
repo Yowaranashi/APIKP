@@ -33,6 +33,63 @@ namespace HranitelPRO.API.Controllers
             return Ok(new { imported });
         }
 
+
+        [HttpPost("departments")]
+        [Authorize]
+        [RequestSizeLimit(5 * 1024 * 1024)]
+        public async Task<ActionResult> ImportDepartments([FromForm] FileUploadDto request)
+        {
+            if (request.File == null || request.File.Length == 0)
+            {
+                return BadRequest(new { message = "Файл не найден" });
+            }
+
+            var imported = await _importService.ImportDepartmentsAsync(request.File);
+            return Ok(new { imported });
+        }
+
+        [HttpPost("roles")]
+        [Authorize]
+        [RequestSizeLimit(5 * 1024 * 1024)]
+        public async Task<ActionResult> ImportRoles([FromForm] FileUploadDto request)
+        {
+            if (request.File == null || request.File.Length == 0)
+            {
+                return BadRequest(new { message = "Файл не найден" });
+            }
+
+            var imported = await _importService.ImportRolesAsync(request.File);
+            return Ok(new { imported });
+        }
+
+        [HttpPost("statuses")]
+        [Authorize]
+        [RequestSizeLimit(5 * 1024 * 1024)]
+        public async Task<ActionResult> ImportStatuses([FromForm] FileUploadDto request)
+        {
+            if (request.File == null || request.File.Length == 0)
+            {
+                return BadRequest(new { message = "Файл не найден" });
+            }
+
+            var imported = await _importService.ImportStatusesAsync(request.File);
+            return Ok(new { imported });
+        }
+
+        [HttpPost("groups")]
+        [Authorize]
+        [RequestSizeLimit(5 * 1024 * 1024)]
+        public async Task<ActionResult> ImportGroups([FromForm] FileUploadDto request)
+        {
+            if (request.File == null || request.File.Length == 0)
+            {
+                return BadRequest(new { message = "Файл не найден" });
+            }
+
+            var imported = await _importService.ImportGroupsAsync(request.File);
+            return Ok(new { imported });
+        }
+
         [HttpPost("employees")]
         [Authorize]
         [RequestSizeLimit(10 * 1024 * 1024)]
