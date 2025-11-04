@@ -7,6 +7,10 @@ namespace HranitelPRO.API.Services
     {
         Task<int> ImportVisitorsAsync(IFormFile file);
         Task<int> ImportEmployeesAsync(IFormFile file);
+        Task<int> ImportDepartmentsAsync(IFormFile file);
+        Task<int> ImportRolesAsync(IFormFile file);
+        Task<int> ImportStatusesAsync(IFormFile file);
+        Task<int> ImportGroupsAsync(IFormFile file);
         Task<SessionImportResult> ImportSessionsAsync(SessionImportOptions options);
     }
 
