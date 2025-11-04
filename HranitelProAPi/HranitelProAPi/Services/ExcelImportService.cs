@@ -46,7 +46,6 @@ namespace HranitelPRO.API.Services
         private static readonly string[] StatusNameHeaders = { "status", "statusname", "name", "статус" };
         private static readonly string[] GroupNameHeaders = { "group", "groupname", "name", "группа" };
         private static readonly string[] GroupDescriptionHeaders = { "description", "details", "назначение", "описание" };
-
         private readonly HranitelContext _context;
         private readonly IHostEnvironment _environment;
         private readonly string _uploadsRoot;
@@ -144,7 +143,6 @@ namespace HranitelPRO.API.Services
             var records = headerMap.Count > 0
                 ? BuildEmployeeRecordsFromHeaders(dataRows, headerMap)
                 : new List<EmployeeImportModel>();
-
             if (records.Count == 0)
             {
                 records = BuildEmployeeRecordsFromLegacy(dataRows);

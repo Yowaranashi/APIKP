@@ -159,7 +159,6 @@ export const ApplicationFormPersonal = () => {
         toast.error('Некорректно выбрано подразделение или ответственный сотрудник');
         return;
       }
-
       const applicantParticipant = {
         fullName: values.applicantName,
         birthDate: values.applicantBirthDate,
