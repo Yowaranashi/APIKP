@@ -173,10 +173,12 @@ export const ApplicationFormGroup = () => {
         employeeId: values.employeeId,
         applicantName: values.applicantName,
         applicantPhone: values.applicantPhone,
+        applicantEmail: user?.email || undefined,
         applicantBirthDate: values.applicantBirthDate,
         applicantPassport: values.applicantPassport,
         applicantCompany: values.organization,
         groupSize: values.groupSize ?? undefined,
+        applicantUserId: user?.id,
         files: {
           passport: values.passportFile || undefined,
           participants: values.participantsFile || undefined,

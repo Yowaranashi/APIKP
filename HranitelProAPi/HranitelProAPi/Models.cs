@@ -92,6 +92,7 @@ namespace HranitelPRO.API.Models
         public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Checked
         [MaxLength(2000)]
         public string? RejectionReason { get; set; }
+        public int? GroupSize { get; set; }
         public ICollection<PassVisitor>? Visitors { get; set; }
         public ICollection<FileAttachment>? Attachments { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

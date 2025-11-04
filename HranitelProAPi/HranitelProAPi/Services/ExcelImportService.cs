@@ -16,6 +16,7 @@ namespace HranitelPRO.API.Services
     public class ExcelImportService : IExcelImportService
     {
         private static readonly string[] DepartmentHeaders = { "department", "departmentname", "building", "facility", "отдел", "здание" };
+        private static readonly string[] DepartmentDescriptionHeaders = { "description", "departmentdescription", "описание", "comment" };
         private static readonly string[] RequestTypeHeaders = { "requesttype", "type", "тип" };
         private static readonly string[] StartDateHeaders = { "startdate", "start", "начало", "датаначала" };
         private static readonly string[] EndDateHeaders = { "enddate", "end", "окончание", "датaокончания", "датаокончания" };
@@ -29,6 +30,10 @@ namespace HranitelPRO.API.Services
         private static readonly string[] SessionCodeHeaders = { "sessioncode", "externalid", "code", "кодовнешний", "номерсессии" };
         private static readonly string[] PhotoHeaders = { "photo", "photofile", "photofilename", "фото" };
         private static readonly string[] PdfHeaders = { "pdf", "pdffile", "document", "attachment", "паспорт", "документ" };
+        private static readonly string[] RoleNameHeaders = { "role", "rolename", "name", "роль" };
+        private static readonly string[] RoleDescriptionHeaders = { "description", "details", "описание" };
+        private static readonly string[] StatusNameHeaders = { "status", "statusname", "name", "статус" };
+        private static readonly string[] GroupNameHeaders = { "group", "groupname", "name", "группа" };
 
         private readonly HranitelContext _context;
         private readonly IHostEnvironment _environment;
@@ -134,6 +139,345 @@ namespace HranitelPRO.API.Services
 
             return imported;
         }
+
+        public async Task<int> ImportDepartmentsAsync(IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+            using var workbook = new XLWorkbook(stream);
+            var worksheet = workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null)
+            {
+                return 0;
+            }
+
+            var range = worksheet.RangeUsed();
+            if (range == null)
+            {
+                return 0;
+            }
+
+            var rows = range.RowsUsed().ToList();
+            if (rows.Count <= 1)
+            {
+                return 0;
+            }
+
+            var headerMap = BuildHeaderMap(rows.First());
+            var records = rows
+                .Skip(1)
+                .Select(row => new
+                {
+                    Name = GetString(row, headerMap, DepartmentHeaders),
+                    Description = GetString(row, headerMap, DepartmentDescriptionHeaders)
+                })
+                .Where(r => !string.IsNullOrWhiteSpace(r.Name))
+                .Select(r => new
+                {
+                    Name = r.Name!.Trim(),
+                    Description = string.IsNullOrWhiteSpace(r.Description) ? null : r.Description!.Trim()
+                })
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var distinct = records
+                .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new
+                {
+                    Name = group.Key,
+                    Description = group.Select(r => r.Description).FirstOrDefault(d => !string.IsNullOrWhiteSpace(d))
+                })
+                .ToList();
+
+            var names = distinct.Select(d => d.Name).ToList();
+            var existing = await _context.Departments
+                .Where(d => names.Contains(d.Name))
+                .ToDictionaryAsync(d => d.Name, StringComparer.OrdinalIgnoreCase);
+
+            var imported = 0;
+            foreach (var entry in distinct)
+            {
+                if (existing.TryGetValue(entry.Name, out var department))
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.Description) && entry.Description != department.Description)
+                    {
+                        department.Description = entry.Description;
+                    }
+                }
+                else
+                {
+                    department = new Department
+                    {
+                        Name = entry.Name,
+                        Description = entry.Description
+                    };
+
+                    _context.Departments.Add(department);
+                    existing[entry.Name] = department;
+                    imported++;
+                }
+            }
+
+            if (_context.ChangeTracker.HasChanges())
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return imported;
+        }
+
+        public async Task<int> ImportRolesAsync(IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+            using var workbook = new XLWorkbook(stream);
+            var worksheet = workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null)
+            {
+                return 0;
+            }
+
+            var range = worksheet.RangeUsed();
+            if (range == null)
+            {
+                return 0;
+            }
+
+            var rows = range.RowsUsed().ToList();
+            if (rows.Count <= 1)
+            {
+                return 0;
+            }
+
+            var headerMap = BuildHeaderMap(rows.First());
+            var records = rows
+                .Skip(1)
+                .Select(row => new
+                {
+                    Name = GetString(row, headerMap, RoleNameHeaders),
+                    Description = GetString(row, headerMap, RoleDescriptionHeaders)
+                })
+                .Where(r => !string.IsNullOrWhiteSpace(r.Name))
+                .Select(r => new
+                {
+                    Name = r.Name!.Trim(),
+                    Description = string.IsNullOrWhiteSpace(r.Description) ? null : r.Description!.Trim()
+                })
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var distinct = records
+                .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new
+                {
+                    Name = group.Key,
+                    Description = group.Select(r => r.Description).FirstOrDefault(d => !string.IsNullOrWhiteSpace(d))
+                })
+                .ToList();
+
+            var names = distinct.Select(d => d.Name).ToList();
+            var existing = await _context.Roles
+                .Where(r => names.Contains(r.Name))
+                .ToDictionaryAsync(r => r.Name, StringComparer.OrdinalIgnoreCase);
+
+            var imported = 0;
+            foreach (var entry in distinct)
+            {
+                if (existing.TryGetValue(entry.Name, out var role))
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.Description) && entry.Description != role.Description)
+                    {
+                        role.Description = entry.Description;
+                    }
+                }
+                else
+                {
+                    role = new Role
+                    {
+                        Name = entry.Name,
+                        Description = entry.Description
+                    };
+
+                    _context.Roles.Add(role);
+                    existing[entry.Name] = role;
+                    imported++;
+                }
+            }
+
+            if (_context.ChangeTracker.HasChanges())
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return imported;
+        }
+
+        public async Task<int> ImportStatusesAsync(IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+            using var workbook = new XLWorkbook(stream);
+            var worksheet = workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null)
+            {
+                return 0;
+            }
+
+            var range = worksheet.RangeUsed();
+            if (range == null)
+            {
+                return 0;
+            }
+
+            var rows = range.RowsUsed().ToList();
+            if (rows.Count <= 1)
+            {
+                return 0;
+            }
+
+            var headerMap = BuildHeaderMap(rows.First());
+            var names = rows
+                .Skip(1)
+                .Select(row => GetString(row, headerMap, StatusNameHeaders))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (names.Count == 0)
+            {
+                return 0;
+            }
+
+            var existing = await _context.ApplicationStatuses
+                .Where(s => names.Contains(s.StatusName))
+                .ToDictionaryAsync(s => s.StatusName, StringComparer.OrdinalIgnoreCase);
+
+            var imported = 0;
+            foreach (var name in names)
+            {
+                if (existing.ContainsKey(name))
+                {
+                    continue;
+                }
+
+                var status = new ApplicationStatus
+                {
+                    StatusName = name
+                };
+
+                _context.ApplicationStatuses.Add(status);
+                existing[name] = status;
+                imported++;
+            }
+
+            if (_context.ChangeTracker.HasChanges())
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return imported;
+        }
+
+        public async Task<int> ImportGroupsAsync(IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+            using var workbook = new XLWorkbook(stream);
+            var worksheet = workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null)
+            {
+                return 0;
+            }
+
+            var range = worksheet.RangeUsed();
+            if (range == null)
+            {
+                return 0;
+            }
+
+            var rows = range.RowsUsed().ToList();
+            if (rows.Count <= 1)
+            {
+                return 0;
+            }
+
+            var headerMap = BuildHeaderMap(rows.First());
+            var names = rows
+                .Skip(1)
+                .Select(row => GetString(row, headerMap, GroupNameHeaders))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (names.Count == 0)
+            {
+                return 0;
+            }
+
+            var existing = await _context.Groups
+                .Where(g => g.GroupName != null && names.Contains(g.GroupName))
+                .ToDictionaryAsync(g => g.GroupName!, StringComparer.OrdinalIgnoreCase);
+
+            var imported = 0;
+            foreach (var name in names)
+            {
+                if (existing.ContainsKey(name))
+                {
+                    continue;
+                }
+
+                var group = new Group
+                {
+                    GroupName = name
+                };
+
+                _context.Groups.Add(group);
+                existing[name] = group;
+                imported++;
+            }
+
+            if (_context.ChangeTracker.HasChanges())
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return imported;
+        }
+
 
         public async Task<SessionImportResult> ImportSessionsAsync(SessionImportOptions options)
         {
