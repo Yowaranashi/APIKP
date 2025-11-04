@@ -98,6 +98,7 @@ CREATE TABLE PassRequests (
 CREATE TABLE Groups (
     GroupID INT IDENTITY PRIMARY KEY,
     GroupName NVARCHAR(200) NULL,
+    Description NVARCHAR(500) NULL,
     CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 
@@ -109,11 +110,14 @@ CREATE TABLE PassVisitors (
     MiddleName NVARCHAR(100) NULL,
     Phone NVARCHAR(20) NULL,
     Email NVARCHAR(200) NULL,
+    BirthDate DATETIME2 NULL,
     PassportSeries NVARCHAR(10) NOT NULL,
     PassportNumber NVARCHAR(10) NOT NULL,
     PhotoPath NVARCHAR(500) NULL,
     IsBlacklisted BIT NOT NULL DEFAULT 0,
-    FOREIGN KEY (PassRequestId) REFERENCES PassRequests(Id)
+    GroupID INT NULL,
+    FOREIGN KEY (PassRequestId) REFERENCES PassRequests(Id),
+    FOREIGN KEY (GroupID) REFERENCES Groups(GroupID)
 );
 
 ------------------------------------------------------------

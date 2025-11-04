@@ -6,8 +6,8 @@ export interface ApplicationPayload {
   startDate: string;
   endDate: string;
   purpose: string;
-  departmentId: string;
-  employeeId: string;
+  departmentId: number;
+  employeeId: number;
   applicantName: string;
   applicantPhone: string;
   applicantEmail?: string;

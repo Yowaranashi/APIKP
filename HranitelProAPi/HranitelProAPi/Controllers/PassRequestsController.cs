@@ -84,6 +84,7 @@ namespace HranitelPRO.API.Controllers
                 .Include(p => p.ResponsibleEmployee)
                 .Include(p => p.StatusRef)
                 .Include(p => p.Visitors)
+                    .ThenInclude(v => v.Group)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
 
@@ -100,6 +101,7 @@ namespace HranitelPRO.API.Controllers
                 .Include(p => p.ResponsibleEmployee)
                 .Include(p => p.StatusRef)
                 .Include(p => p.Visitors)
+                    .ThenInclude(v => v.Group)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (request == null)
@@ -290,6 +292,7 @@ namespace HranitelPRO.API.Controllers
                     MiddleName = v.MiddleName,
                     Phone = v.Phone,
                     Email = v.Email,
+                    BirthDate = v.BirthDate,
                     PassportSeries = v.PassportSeries,
                     PassportNumber = v.PassportNumber
                 }).ToList();
@@ -323,6 +326,7 @@ namespace HranitelPRO.API.Controllers
                 .Include(p => p.ResponsibleEmployee)
                 .Include(p => p.StatusRef)
                 .Include(p => p.Visitors)
+                .ThenInclude(v => v.Group)
                 .FirstAsync(p => p.Id == id);
         }
 
@@ -468,8 +472,11 @@ namespace HranitelPRO.API.Controllers
                 MiddleName = v.MiddleName,
                 Email = v.Email,
                 Phone = v.Phone,
+                BirthDate = v.BirthDate,
                 PassportNumber = v.PassportNumber,
-                PassportSeries = v.PassportSeries
+                PassportSeries = v.PassportSeries,
+                GroupId = v.GroupId,
+                GroupName = v.Group?.GroupName
             }).ToList() ?? new List<PassVisitorDto>()
         };
 
@@ -544,6 +551,7 @@ namespace HranitelPRO.API.Controllers
                         LastName = lastName ?? formDto.ApplicantName,
                         FirstName = firstName ?? formDto.ApplicantName,
                         MiddleName = middleName,
+                        BirthDate = birthDate,
                         PassportSeries = passportSeries,
                         PassportNumber = passportNumber,
                         Phone = formDto.ApplicantPhone,
@@ -601,6 +609,20 @@ namespace HranitelPRO.API.Controllers
 
                     var (lastName, firstName, middleName) = SplitFullName(participant.FullName);
                     var (series, number) = SplitPassport(participant.Passport);
+                    DateTime? birthDate = null;
+                    if (!string.IsNullOrWhiteSpace(participant.BirthDate))
+                    {
+                        if (DateTime.TryParse(participant.BirthDate, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsedBirth)
+                            || DateTime.TryParse(participant.BirthDate, new CultureInfo("ru-RU"), DateTimeStyles.AssumeLocal, out parsedBirth))
+                        {
+                            birthDate = parsedBirth;
+                        }
+                        else
+                        {
+                            errors.Add("В списке участников найдены записи с некорректной датой рождения.");
+                            continue;
+                        }
+                    }
 
                     if (string.IsNullOrWhiteSpace(lastName) || string.IsNullOrWhiteSpace(firstName) ||
                         string.IsNullOrWhiteSpace(series) || string.IsNullOrWhiteSpace(number))
@@ -614,6 +636,7 @@ namespace HranitelPRO.API.Controllers
                         LastName = lastName,
                         FirstName = firstName,
                         MiddleName = middleName,
+                        BirthDate = birthDate,
                         PassportSeries = series,
                         PassportNumber = number,
                         Phone = participant.Phone,
@@ -929,6 +952,9 @@ namespace HranitelPRO.API.Controllers
         public string PassportNumber { get; set; } = null!;
         public string? Email { get; set; }
         public string? Phone { get; set; }
+        public DateTime? BirthDate { get; set; }
+        public int? GroupId { get; set; }
+        public string? GroupName { get; set; }
     }
 
     public class PassRequestCreateDto
@@ -960,6 +986,7 @@ namespace HranitelPRO.API.Controllers
         public string LastName { get; set; } = null!;
         public string FirstName { get; set; } = null!;
         public string? MiddleName { get; set; }
+        public DateTime? BirthDate { get; set; }
         public string PassportSeries { get; set; } = null!;
         public string PassportNumber { get; set; } = null!;
         public string? Email { get; set; }
