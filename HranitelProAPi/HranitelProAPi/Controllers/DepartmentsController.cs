@@ -30,18 +30,7 @@ namespace HranitelPRO.API.Controllers
                 .OrderBy(d => d.Name)
                 .ToListAsync();
 
-            var result = departments.Select(d => new DepartmentDto
-            {
-                Id = d.Id,
-                Name = d.Name,
-                Description = d.Description,
-                Employees = d.Employees?.Select(e => new EmployeeDto
-                {
-                    Id = e.Id,
-                    FullName = e.FullName,
-                    EmployeeCode = e.EmployeeCode
-                }).ToList() ?? new List<EmployeeDto>()
-            });
+            var result = departments.Select(MapDepartment);
 
             return Ok(result);
         }
@@ -59,18 +48,7 @@ namespace HranitelPRO.API.Controllers
                 return NotFound();
             }
 
-            return Ok(new DepartmentDto
-            {
-                Id = department.Id,
-                Name = department.Name,
-                Description = department.Description,
-                Employees = department.Employees?.Select(e => new EmployeeDto
-                {
-                    Id = e.Id,
-                    FullName = e.FullName,
-                    EmployeeCode = e.EmployeeCode
-                }).ToList() ?? new List<EmployeeDto>()
-            });
+            return Ok(MapDepartment(department));
         }
 
         [HttpPost]
@@ -90,13 +68,7 @@ namespace HranitelPRO.API.Controllers
             _context.Departments.Add(department);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetById), new { id = department.Id }, new DepartmentDto
-            {
-                Id = department.Id,
-                Name = department.Name,
-                Description = department.Description,
-                Employees = new List<EmployeeDto>()
-            });
+            return CreatedAtAction(nameof(GetById), new { id = department.Id }, MapDepartment(department));
         }
 
         [HttpPut("{id:int}")]
@@ -138,6 +110,21 @@ namespace HranitelPRO.API.Controllers
             _context.Departments.Remove(department);
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+        private static DepartmentDto MapDepartment(Department department)
+        {
+            return new DepartmentDto
+            {
+                Id = department.Id,
+                Name = department.Name,
+                Description = department.Description,
+                Employees = department.Employees?.Select(e => new EmployeeDto
+                {
+                    Id = e.Id,
+                    FullName = e.FullName,
+                    EmployeeCode = e.EmployeeCode
+                }).ToList() ?? new List<EmployeeDto>()
+            };
         }
     }
 

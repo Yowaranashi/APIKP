@@ -39,22 +39,24 @@ namespace HranitelPRO.API.Controllers
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
-            var result = requests.Select(r => new DivisionRequestDto
+            var result = requests.Select(r =>
             {
-                Id = r.Id,
-                Status = r.Status,
-                StartDate = r.StartDate,
-                EndDate = r.EndDate,
-                Purpose = r.Purpose,
-                Visitors = r.Visitors?.Select(v => new DivisionVisitorDto
+                var visitRecords = r.VisitRecords?
+                    .Where(rec => rec.VisitorId.HasValue)
+                    .GroupBy(rec => rec.VisitorId!.Value)
+                    .ToDictionary(group => group.Key, group => group.First())
+                    ?? new Dictionary<int, VisitRecord>();
+
+                return new DivisionRequestDto
                 {
-                    Id = v.Id,
-                    FullName = string.Join(" ", new[] { v.LastName, v.FirstName, v.MiddleName }.Where(s => !string.IsNullOrEmpty(s))),
-                    PassportSeries = v.PassportSeries,
-                    PassportNumber = v.PassportNumber,
-                    EntryTime = r.VisitRecords?.FirstOrDefault(rec => rec.VisitorId == v.Id)?.EntryTime,
-                    ExitTime = r.VisitRecords?.FirstOrDefault(rec => rec.VisitorId == v.Id)?.ExitTime
-                }).ToList() ?? new List<DivisionVisitorDto>()
+                    Id = r.Id,
+                    Status = r.Status,
+                    StartDate = r.StartDate,
+                    EndDate = r.EndDate,
+                    Purpose = r.Purpose,
+                    Visitors = r.Visitors?.Select(visitor => MapVisitor(visitor, visitRecords)).ToList()
+                               ?? new List<DivisionVisitorDto>()
+                };
             });
 
             return Ok(result);
@@ -131,6 +133,27 @@ namespace HranitelPRO.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { entry.Id });
+        }
+
+        private static DivisionVisitorDto MapVisitor(PassVisitor visitor, IReadOnlyDictionary<int, VisitRecord> visitRecords)
+        {
+            visitRecords.TryGetValue(visitor.Id, out var record);
+
+            return new DivisionVisitorDto
+            {
+                Id = visitor.Id,
+                FullName = BuildFullName(visitor),
+                PassportSeries = visitor.PassportSeries,
+                PassportNumber = visitor.PassportNumber,
+                EntryTime = record?.EntryTime,
+                ExitTime = record?.ExitTime
+            };
+        }
+
+        private static string BuildFullName(PassVisitor visitor)
+        {
+            return string.Join(" ", new[] { visitor.LastName, visitor.FirstName, visitor.MiddleName }
+                .Where(part => !string.IsNullOrWhiteSpace(part)));
         }
     }
 
