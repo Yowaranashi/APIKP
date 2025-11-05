@@ -2,12 +2,12 @@
 # Требуется авторизационный токен Bearer и доступ к эндпоинту POST /api/import/sessions
 
 ### Импорт сессии 1
-# curl -X POST http://localhost:5000/api/import/sessions \
+# curl -X POST http://127.0.0.1:5000/api/import/sessions \
 #   -H "Authorization: Bearer <JWT_TOKEN>" \
 #   -F "excel=@data/session-1.xlsx" \
 #   -F "attachments=@data/building-1-photo.jpg" \
 #   -F "attachments=@data/building-1-passport.pdf"
-POST http://localhost:5000/api/import/sessions
+POST http://127.0.0.1:5000/api/import/sessions
 Authorization: Bearer <JWT_TOKEN>
 Content-Type: multipart/form-data; boundary=import
 
@@ -29,11 +29,11 @@ Content-Type: application/pdf
 --import--
 
 ### Импорт сессии 2
-# curl -X POST http://localhost:5000/api/import/sessions \
+# curl -X POST http://127.0.0.1:5000/api/import/sessions \
 #   -H "Authorization: Bearer <JWT_TOKEN>" \
 #   -F "excel=@data/session-2.xlsx" \
 #   -F "attachments=@data/building-2-photo.png"
-POST http://localhost:5000/api/import/sessions
+POST http://127.0.0.1:5000/api/import/sessions
 Authorization: Bearer <JWT_TOKEN>
 Content-Type: multipart/form-data; boundary=import
 
@@ -50,11 +50,11 @@ Content-Type: image/png
 --import--
 
 ### Импорт сессии 3
-# curl -X POST http://localhost:5000/api/import/sessions \
+# curl -X POST http://127.0.0.1:5000/api/import/sessions \
 #   -H "Authorization: Bearer <JWT_TOKEN>" \
 #   -F "excel=@data/session-3.xlsx" \
 #   -F "attachments=@data/building-3-passport.pdf"
-POST http://localhost:5000/api/import/sessions
+POST http://127.0.0.1:5000/api/import/sessions
 Authorization: Bearer <JWT_TOKEN>
 Content-Type: multipart/form-data; boundary=import
 

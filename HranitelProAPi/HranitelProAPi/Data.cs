@@ -41,7 +41,7 @@ namespace HranitelPro.API.Data
             if (!optionsBuilder.IsConfigured)
             {
                 optionsBuilder.UseSqlServer(
-                    "Server=localhost;Database=HranitelPRO;User Id=sa;Password=YSPASS!Gaqt4;TrustServerCertificate=True;");
+                    "Server=127.0.0.1;Database=HranitelPRO;User Id=sa;Password=YSPASS!Gaqt4;TrustServerCertificate=True;");
             }
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)

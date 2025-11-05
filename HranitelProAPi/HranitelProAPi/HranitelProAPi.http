@@ -1,6 +1,11 @@
-@HranitelProAPi_HostAddress = http://localhost:5203
+@HranitelProAPi_HostAddress = http://127.0.0.1:5203
 
 GET {{HranitelProAPi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+GET {{HranitelProAPi_HostAddress}}/api/health/ping
 Accept: application/json
 
 ###

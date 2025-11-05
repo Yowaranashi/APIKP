@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 8.0.29, for Win64 (x86_64)
 --
--- Host: localhost    Database: db_bsn_user1
+-- Host: 127.0.0.1    Database: db_bsn_user1
 -- ------------------------------------------------------
 -- Server version	8.0.29
 
