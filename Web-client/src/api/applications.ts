@@ -6,8 +6,8 @@ export interface ApplicationPayload {
   startDate: string;
   endDate: string;
   purpose: string;
-  departmentId: string;
-  employeeId: string;
+  departmentId: number;
+  employeeId: number;
   applicantName: string;
   applicantPhone: string;
   applicantEmail?: string;
@@ -15,6 +15,8 @@ export interface ApplicationPayload {
   applicantPassport: string;
   applicantCompany?: string;
   groupSize?: number;
+  applicantUserId?: number;
+  note?: string;
   files?: {
     photo?: File;
     passport?: File;
@@ -69,9 +71,66 @@ export const submitApplication = async (payload: ApplicationPayload) => {
   return data;
 };
 
+type ApiApplicationStatus = 'Pending' | 'Approved' | 'Rejected' | 'Draft' | string;
+
+interface ApiPassRequestSummary {
+  id: number;
+  requestType?: string;
+  department?: string;
+  departmentId: number;
+  responsibleEmployeeId?: number;
+  startDate: string;
+  endDate: string;
+  status: ApiApplicationStatus;
+  purpose: string;
+  visitorCount: number;
+  groupSize?: number | null;
+  createdAt: string;
+  applicantFullName?: string;
+  applicantPhone?: string;
+  applicantBirthDate?: string | null;
+  applicantPassport?: string;
+  applicantEmail?: string;
+  applicantOrganization?: string;
+}
+
+const mapStatus = (status: ApiApplicationStatus): Application['status'] => {
+  switch (status?.toLowerCase()) {
+    case 'approved':
+      return 'approved';
+    case 'rejected':
+      return 'rejected';
+    case 'pending':
+      return 'pending';
+    default:
+      return 'draft';
+  }
+};
+
+const mapToApplication = (item: ApiPassRequestSummary): Application => ({
+  id: item.id.toString(),
+  type: item.requestType?.toLowerCase() === 'group' ? 'group' : 'personal',
+  purpose: item.purpose,
+  departmentId: item.departmentId?.toString() ?? '',
+  employeeId: item.responsibleEmployeeId?.toString() ?? '',
+  startDate: item.startDate,
+  endDate: item.endDate,
+  status: mapStatus(item.status),
+  createdAt: item.createdAt,
+  applicantName: item.applicantFullName || '',
+  applicantPhone: item.applicantPhone || '',
+  applicantBirthDate: item.applicantBirthDate || '',
+  applicantPassport: item.applicantPassport || '',
+  files: [],
+  groupSize:
+    item.requestType?.toLowerCase() === 'group'
+      ? item.groupSize ?? item.visitorCount ?? undefined
+      : undefined,
+});
+
 export const getUserApplications = async (userId: number) => {
-  const { data } = await axiosClient.get<Application[]>(`/api/applications`, {
+  const { data } = await axiosClient.get<ApiPassRequestSummary[]>(`/api/applications`, {
     params: { userId: userId.toString() },
   });
-  return data;
+  return data.map(mapToApplication);
 };

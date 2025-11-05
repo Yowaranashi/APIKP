@@ -80,6 +80,12 @@ namespace HranitelPro.API.Data
                 .HasForeignKey(v => v.PassRequestId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<PassVisitor>()
+                .HasOne(v => v.Group)
+                .WithMany(g => g.Visitors)
+                .HasForeignKey(v => v.GroupId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             // FileAttachment relation constraints: either PassRequestId or PassVisitorId
             modelBuilder.Entity<FileAttachment>()
                 .HasOne(f => f.PassRequest)

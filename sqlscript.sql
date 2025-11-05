@@ -87,6 +87,7 @@ CREATE TABLE PassRequests (
     CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     CheckedByUserId INT NULL,
     StatusID INT NOT NULL,
+    GroupSize INT NULL,
     FOREIGN KEY (DepartmentId) REFERENCES Departments(Id),
     FOREIGN KEY (ResponsibleEmployeeId) REFERENCES Employees(Id),
     FOREIGN KEY (ApplicantUserId) REFERENCES Users(Id),
@@ -97,6 +98,7 @@ CREATE TABLE PassRequests (
 CREATE TABLE Groups (
     GroupID INT IDENTITY PRIMARY KEY,
     GroupName NVARCHAR(200) NULL,
+    Description NVARCHAR(500) NULL,
     CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 
@@ -108,11 +110,14 @@ CREATE TABLE PassVisitors (
     MiddleName NVARCHAR(100) NULL,
     Phone NVARCHAR(20) NULL,
     Email NVARCHAR(200) NULL,
+    BirthDate DATETIME2 NULL,
     PassportSeries NVARCHAR(10) NOT NULL,
     PassportNumber NVARCHAR(10) NOT NULL,
     PhotoPath NVARCHAR(500) NULL,
     IsBlacklisted BIT NOT NULL DEFAULT 0,
-    FOREIGN KEY (PassRequestId) REFERENCES PassRequests(Id)
+    GroupID INT NULL,
+    FOREIGN KEY (PassRequestId) REFERENCES PassRequests(Id),
+    FOREIGN KEY (GroupID) REFERENCES Groups(GroupID)
 );
 
 ------------------------------------------------------------
@@ -124,6 +129,7 @@ CREATE TABLE FileAttachments (
     PassRequestId INT NULL,
     PassVisitorId INT NULL,
     FileTypeID INT NOT NULL,
+    DepartmentId INT NULL,
     FilePath NVARCHAR(500) NOT NULL,
     FileName NVARCHAR(100) NOT NULL,
     ContentType NVARCHAR(50) NOT NULL,
@@ -131,7 +137,8 @@ CREATE TABLE FileAttachments (
     UploadedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     FOREIGN KEY (PassRequestId) REFERENCES PassRequests(Id),
     FOREIGN KEY (PassVisitorId) REFERENCES PassVisitors(Id),
-    FOREIGN KEY (FileTypeID) REFERENCES FileTypes(FileTypeID)
+    FOREIGN KEY (FileTypeID) REFERENCES FileTypes(FileTypeID),
+    FOREIGN KEY (DepartmentId) REFERENCES Departments(Id)
 );
 
 ------------------------------------------------------------
@@ -219,6 +226,7 @@ CREATE TABLE AuditLogs (
     Action NVARCHAR(200) NOT NULL,
     Details NVARCHAR(4000) NULL,
     FOREIGN KEY (UserId) REFERENCES Users(Id)
+);
 
 
 ------------------------------------------------------------

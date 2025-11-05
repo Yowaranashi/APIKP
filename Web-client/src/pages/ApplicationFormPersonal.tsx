@@ -153,21 +153,37 @@ export const ApplicationFormPersonal = () => {
     }
 
     try {
+      const departmentId = Number.parseInt(values.departmentId, 10);
+      const employeeId = Number.parseInt(values.employeeId, 10);
+      if (Number.isNaN(departmentId) || Number.isNaN(employeeId)) {
+        toast.error('Некорректно выбрано подразделение или ответственный сотрудник');
+        return;
+      }
+
+      const applicantParticipant = {
+        fullName: values.applicantName,
+        birthDate: values.applicantBirthDate,
+        passport: values.applicantPassport,
+      };
+
       await submitApplication({
         type: 'personal',
         startDate: values.startDate,
         endDate: values.endDate,
         purpose: values.purpose,
-        departmentId: values.departmentId,
-        employeeId: values.employeeId,
+        departmentId,
+        employeeId,
         applicantName: values.applicantName,
         applicantPhone: values.applicantPhone,
+        applicantEmail: user?.email || undefined,
         applicantBirthDate: values.applicantBirthDate,
         applicantPassport: values.applicantPassport,
+        applicantUserId: user?.id,
         files: {
           photo: values.photo || undefined,
           passport: values.passportFile || undefined,
         },
+        participants: [applicantParticipant],
       });
       toast.success('Заявка отправлена на рассмотрение');
       navigate('/dashboard');

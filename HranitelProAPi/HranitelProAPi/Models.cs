@@ -92,7 +92,8 @@ namespace HranitelPRO.API.Models
         public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Checked
         [MaxLength(2000)]
         public string? RejectionReason { get; set; }
-        public ICollection<PassVisitor>? Visitors { get; set; }
+        public int? GroupSize { get; set; }
+        public ICollection<PassVisitor> Visitors { get; set; } = new List<PassVisitor>();
         public ICollection<FileAttachment>? Attachments { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int? CheckedByUserId { get; set; }
@@ -119,6 +120,7 @@ namespace HranitelPRO.API.Models
         public string? Phone { get; set; }
         [MaxLength(200)]
         public string? Email { get; set; }
+        public DateTime? BirthDate { get; set; }
         [MaxLength(10)]
         public string PassportSeries { get; set; } = null!;
         [MaxLength(10)]
@@ -127,6 +129,8 @@ namespace HranitelPRO.API.Models
         public string? PhotoPath { get; set; }
         public ICollection<FileAttachment>? Attachments { get; set; }
         public bool IsBlacklisted { get; set; } = false;
+        public int? GroupId { get; set; }
+        public Group? Group { get; set; }
     }
 
     public class BlacklistEntry
@@ -367,6 +371,8 @@ namespace HranitelPRO.API.Models
         public int GroupID { get; set; }
         [MaxLength(200)]
         public string? GroupName { get; set; }
+        [MaxLength(500)]
+        public string? Description { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public ICollection<PassVisitor>? Visitors { get; set; }
     }

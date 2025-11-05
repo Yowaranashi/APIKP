@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using HranitelPro.API.Data;
 using HranitelPRO.API.Models;
@@ -15,7 +16,18 @@ namespace HranitelPRO.API.Services
 {
     public class ExcelImportService : IExcelImportService
     {
-        private static readonly string[] DepartmentHeaders = { "department", "departmentname", "building", "facility", "отдел", "здание" };
+        private static readonly string[] DepartmentHeaders = { "department", "departmentname", "building", "facility", "отдел", "здание", "подразделение" };
+        private static readonly string[] DepartmentDescriptionHeaders = { "description", "departmentdescription", "описание", "comment" };
+        private static readonly string[] VisitorFullNameHeaders = { "fullname", "fio", "visitor", "фио" };
+        private static readonly string[] VisitorPhoneHeaders = { "phone", "телефон", "номертелефона", "contact" };
+        private static readonly string[] VisitorBirthDateHeaders = { "birthdate", "датарождения", "дата рождения" };
+        private static readonly string[] VisitorPassportHeaders = { "passport", "паспорт", "данныепаспорта", "паспортныеданные" };
+        private static readonly string[] VisitorGroupHeaders = { "group", "groupname", "группа" };
+        private static readonly string[] VisitorGroupDescriptionHeaders = { "назначение", "purpose", "описаниегруппы" };
+        private static readonly string[] EmployeeFullNameHeaders = { "fullname", "fio", "фио" };
+        private static readonly string[] EmployeeDepartmentHeaders = { "подразделение", "department", "division" };
+        private static readonly string[] EmployeeSubDepartmentHeaders = { "отдел", "departmentname", "unit" };
+        private static readonly string[] EmployeeCodeHeaders = { "кодсотрудника", "tabnumber", "employeecode", "табельныйномер" };
         private static readonly string[] RequestTypeHeaders = { "requesttype", "type", "тип" };
         private static readonly string[] StartDateHeaders = { "startdate", "start", "начало", "датаначала" };
         private static readonly string[] EndDateHeaders = { "enddate", "end", "окончание", "датaокончания", "датаокончания" };
@@ -29,6 +41,11 @@ namespace HranitelPRO.API.Services
         private static readonly string[] SessionCodeHeaders = { "sessioncode", "externalid", "code", "кодовнешний", "номерсессии" };
         private static readonly string[] PhotoHeaders = { "photo", "photofile", "photofilename", "фото" };
         private static readonly string[] PdfHeaders = { "pdf", "pdffile", "document", "attachment", "паспорт", "документ" };
+        private static readonly string[] RoleNameHeaders = { "role", "rolename", "name", "роль" };
+        private static readonly string[] RoleDescriptionHeaders = { "description", "details", "описание" };
+        private static readonly string[] StatusNameHeaders = { "status", "statusname", "name", "статус" };
+        private static readonly string[] GroupNameHeaders = { "group", "groupname", "name", "группа" };
+        private static readonly string[] GroupDescriptionHeaders = { "description", "details", "назначение", "описание" };
 
         private readonly HranitelContext _context;
         private readonly IHostEnvironment _environment;
@@ -50,7 +67,6 @@ namespace HranitelPRO.API.Services
                 throw new ArgumentNullException(nameof(file));
             }
 
-            var imported = 0;
             using var stream = new MemoryStream();
             await file.CopyToAsync(stream);
             stream.Position = 0;
@@ -67,28 +83,30 @@ namespace HranitelPRO.API.Services
                 return 0;
             }
 
-            foreach (var row in range.RowsUsed().Skip(1))
+            var rows = range.RowsUsed().ToList();
+            if (rows.Count <= 1)
             {
-                var visitor = new PassVisitor
-                {
-                    LastName = row.Cell(1).GetString(),
-                    FirstName = row.Cell(2).GetString(),
-                    MiddleName = row.Cell(3).GetString(),
-                    Phone = row.Cell(4).GetString(),
-                    Email = row.Cell(5).GetString(),
-                    PassportSeries = row.Cell(6).GetString(),
-                    PassportNumber = row.Cell(7).GetString()
-                };
-                _context.PassVisitors.Add(visitor);
-                imported++;
+                return 0;
             }
 
-            if (imported > 0)
+            var headerMap = BuildHeaderMap(rows.First());
+            var dataRows = rows.Skip(1).ToList();
+
+            var records = headerMap.Count > 0
+                ? BuildVisitorRecordsFromHeaders(dataRows, headerMap)
+                : new List<VisitorImportModel>();
+
+            if (records.Count == 0)
             {
-                await _context.SaveChangesAsync();
+                records = BuildVisitorRecordsFromLegacy(dataRows);
             }
 
-            return imported;
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            return await UpsertVisitorsAsync(records);
         }
 
         public async Task<int> ImportEmployeesAsync(IFormFile file)
@@ -98,7 +116,6 @@ namespace HranitelPRO.API.Services
                 throw new ArgumentNullException(nameof(file));
             }
 
-            var imported = 0;
             using var stream = new MemoryStream();
             await file.CopyToAsync(stream);
             stream.Position = 0;
@@ -115,25 +132,386 @@ namespace HranitelPRO.API.Services
                 return 0;
             }
 
-            foreach (var row in range.RowsUsed().Skip(1))
+            var rows = range.RowsUsed().ToList();
+            if (rows.Count <= 1)
             {
-                var employee = new Employee
-                {
-                    FullName = row.Cell(1).GetString(),
-                    EmployeeCode = row.Cell(2).GetString(),
-                    DepartmentId = row.Cell(3).GetValue<int?>()
-                };
-                _context.Employees.Add(employee);
-                imported++;
+                return 0;
             }
 
-            if (imported > 0)
+            var headerMap = BuildHeaderMap(rows.First());
+            var dataRows = rows.Skip(1).ToList();
+
+            var records = headerMap.Count > 0
+                ? BuildEmployeeRecordsFromHeaders(dataRows, headerMap)
+                : new List<EmployeeImportModel>();
+
+            if (records.Count == 0)
+            {
+                records = BuildEmployeeRecordsFromLegacy(dataRows);
+            }
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            return await UpsertEmployeesAsync(records);
+        }
+
+        public async Task<int> ImportDepartmentsAsync(IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+            using var workbook = new XLWorkbook(stream);
+            var worksheet = workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null)
+            {
+                return 0;
+            }
+
+            var range = worksheet.RangeUsed();
+            if (range == null)
+            {
+                return 0;
+            }
+
+            var rows = range.RowsUsed().ToList();
+            if (rows.Count <= 1)
+            {
+                return 0;
+            }
+
+            var headerMap = BuildHeaderMap(rows.First());
+            var records = rows
+                .Skip(1)
+                .Select(row => new
+                {
+                    Name = GetString(row, headerMap, DepartmentHeaders),
+                    Description = GetString(row, headerMap, DepartmentDescriptionHeaders)
+                })
+                .Where(r => !string.IsNullOrWhiteSpace(r.Name))
+                .Select(r => new
+                {
+                    Name = r.Name!.Trim(),
+                    Description = string.IsNullOrWhiteSpace(r.Description) ? null : r.Description!.Trim()
+                })
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var distinct = records
+                .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new
+                {
+                    Name = group.Key,
+                    Description = group.Select(r => r.Description).FirstOrDefault(d => !string.IsNullOrWhiteSpace(d))
+                })
+                .ToList();
+
+            var names = distinct.Select(d => d.Name).ToList();
+            var existing = await _context.Departments
+                .Where(d => names.Contains(d.Name))
+                .ToDictionaryAsync(d => d.Name, StringComparer.OrdinalIgnoreCase);
+
+            var imported = 0;
+            foreach (var entry in distinct)
+            {
+                if (existing.TryGetValue(entry.Name, out var department))
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.Description) && entry.Description != department.Description)
+                    {
+                        department.Description = entry.Description;
+                    }
+                }
+                else
+                {
+                    department = new Department
+                    {
+                        Name = entry.Name,
+                        Description = entry.Description
+                    };
+
+                    _context.Departments.Add(department);
+                    existing[entry.Name] = department;
+                    imported++;
+                }
+            }
+
+            if (_context.ChangeTracker.HasChanges())
             {
                 await _context.SaveChangesAsync();
             }
 
             return imported;
         }
+
+        public async Task<int> ImportRolesAsync(IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+            using var workbook = new XLWorkbook(stream);
+            var worksheet = workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null)
+            {
+                return 0;
+            }
+
+            var range = worksheet.RangeUsed();
+            if (range == null)
+            {
+                return 0;
+            }
+
+            var rows = range.RowsUsed().ToList();
+            if (rows.Count <= 1)
+            {
+                return 0;
+            }
+
+            var headerMap = BuildHeaderMap(rows.First());
+            var records = rows
+                .Skip(1)
+                .Select(row => new
+                {
+                    Name = GetString(row, headerMap, RoleNameHeaders),
+                    Description = GetString(row, headerMap, RoleDescriptionHeaders)
+                })
+                .Where(r => !string.IsNullOrWhiteSpace(r.Name))
+                .Select(r => new
+                {
+                    Name = r.Name!.Trim(),
+                    Description = string.IsNullOrWhiteSpace(r.Description) ? null : r.Description!.Trim()
+                })
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var distinct = records
+                .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new
+                {
+                    Name = group.Key,
+                    Description = group.Select(r => r.Description).FirstOrDefault(d => !string.IsNullOrWhiteSpace(d))
+                })
+                .ToList();
+
+            var names = distinct.Select(d => d.Name).ToList();
+            var existing = await _context.Roles
+                .Where(r => names.Contains(r.Name))
+                .ToDictionaryAsync(r => r.Name, StringComparer.OrdinalIgnoreCase);
+
+            var imported = 0;
+            foreach (var entry in distinct)
+            {
+                if (existing.TryGetValue(entry.Name, out var role))
+                {
+                    if (!string.IsNullOrWhiteSpace(entry.Description) && entry.Description != role.Description)
+                    {
+                        role.Description = entry.Description;
+                    }
+                }
+                else
+                {
+                    role = new Role
+                    {
+                        Name = entry.Name,
+                        Description = entry.Description
+                    };
+
+                    _context.Roles.Add(role);
+                    existing[entry.Name] = role;
+                    imported++;
+                }
+            }
+
+            if (_context.ChangeTracker.HasChanges())
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return imported;
+        }
+
+        public async Task<int> ImportStatusesAsync(IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+            using var workbook = new XLWorkbook(stream);
+            var worksheet = workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null)
+            {
+                return 0;
+            }
+
+            var range = worksheet.RangeUsed();
+            if (range == null)
+            {
+                return 0;
+            }
+
+            var rows = range.RowsUsed().ToList();
+            if (rows.Count <= 1)
+            {
+                return 0;
+            }
+
+            var headerMap = BuildHeaderMap(rows.First());
+            var names = rows
+                .Skip(1)
+                .Select(row => GetString(row, headerMap, StatusNameHeaders))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (names.Count == 0)
+            {
+                return 0;
+            }
+
+            var existing = await _context.ApplicationStatuses
+                .Where(s => names.Contains(s.StatusName))
+                .ToDictionaryAsync(s => s.StatusName, StringComparer.OrdinalIgnoreCase);
+
+            var imported = 0;
+            foreach (var name in names)
+            {
+                if (existing.ContainsKey(name))
+                {
+                    continue;
+                }
+
+                var status = new ApplicationStatus
+                {
+                    StatusName = name
+                };
+
+                _context.ApplicationStatuses.Add(status);
+                existing[name] = status;
+                imported++;
+            }
+
+            if (_context.ChangeTracker.HasChanges())
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return imported;
+        }
+
+        public async Task<int> ImportGroupsAsync(IFormFile file)
+        {
+            if (file == null)
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+            using var workbook = new XLWorkbook(stream);
+            var worksheet = workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null)
+            {
+                return 0;
+            }
+
+            var range = worksheet.RangeUsed();
+            if (range == null)
+            {
+                return 0;
+            }
+
+            var rows = range.RowsUsed().ToList();
+            if (rows.Count <= 1)
+            {
+                return 0;
+            }
+
+            var headerMap = BuildHeaderMap(rows.First());
+            var records = rows
+                .Skip(1)
+                .Select(row => new
+                {
+                    Name = GetString(row, headerMap, GroupNameHeaders),
+                    Description = GetString(row, headerMap, GroupDescriptionHeaders)
+                })
+                .Where(r => !string.IsNullOrWhiteSpace(r.Name))
+                .GroupBy(r => r.Name!.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(group => new
+                {
+                    Name = group.Key,
+                    Description = group.Select(g => g.Description)
+                        .Select(value => string.IsNullOrWhiteSpace(value) ? null : value!.Trim())
+                        .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+                })
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var names = records.Select(r => r.Name).ToList();
+            var existing = await _context.Groups
+                .Where(g => g.GroupName != null && names.Contains(g.GroupName))
+                .ToDictionaryAsync(g => g.GroupName!, StringComparer.OrdinalIgnoreCase);
+
+            var imported = 0;
+            foreach (var record in records)
+            {
+                if (existing.TryGetValue(record.Name, out var group))
+                {
+                    if (!string.IsNullOrWhiteSpace(record.Description) && string.IsNullOrWhiteSpace(group.Description))
+                    {
+                        group.Description = record.Description;
+                    }
+                    continue;
+                }
+
+                group = new Group
+                {
+                    GroupName = record.Name,
+                    Description = record.Description
+                };
+
+                _context.Groups.Add(group);
+                existing[record.Name] = group;
+                imported++;
+            }
+
+            if (_context.ChangeTracker.HasChanges())
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return imported;
+        }
+
 
         public async Task<SessionImportResult> ImportSessionsAsync(SessionImportOptions options)
         {
@@ -449,6 +827,688 @@ namespace HranitelPRO.API.Services
             }
 
             return result;
+        }
+
+        private List<VisitorImportModel> BuildVisitorRecordsFromHeaders(
+            IReadOnlyCollection<IXLRangeRow> rows,
+            IReadOnlyDictionary<string, int> headerMap)
+        {
+            var records = new List<VisitorImportModel>();
+            foreach (var row in rows)
+            {
+                var fullName = GetString(row, headerMap, VisitorFullNameHeaders);
+                if (string.IsNullOrWhiteSpace(fullName))
+                {
+                    continue;
+                }
+
+                var (series, number) = SplitPassport(GetString(row, headerMap, VisitorPassportHeaders));
+                if (string.IsNullOrWhiteSpace(series) || string.IsNullOrWhiteSpace(number))
+                {
+                    continue;
+                }
+
+                var (lastName, firstName, middleName) = SplitFullName(fullName);
+                var birthDate = ParseFlexibleDate(
+                    GetDate(row, headerMap, VisitorBirthDateHeaders),
+                    GetString(row, headerMap, VisitorBirthDateHeaders));
+
+                records.Add(new VisitorImportModel
+                {
+                    LastName = (lastName ?? fullName).Trim(),
+                    FirstName = (firstName ?? fullName).Trim(),
+                    MiddleName = string.IsNullOrWhiteSpace(middleName) ? null : middleName,
+                    Phone = NormalizePhone(GetString(row, headerMap, VisitorPhoneHeaders)),
+                    Email = GetString(row, headerMap, EmailHeaders)?.Trim(),
+                    BirthDate = birthDate,
+                    PassportSeries = series!,
+                    PassportNumber = number!,
+                    GroupName = NormalizeGroupName(GetString(row, headerMap, VisitorGroupHeaders)),
+                    GroupDescription = NormalizeGroupDescription(GetString(row, headerMap, VisitorGroupDescriptionHeaders))
+                });
+            }
+
+            return records;
+        }
+
+        private static List<VisitorImportModel> BuildVisitorRecordsFromLegacy(IReadOnlyCollection<IXLRangeRow> rows)
+        {
+            var records = new List<VisitorImportModel>();
+            foreach (var row in rows)
+            {
+                var lastName = row.Cell(1).GetString();
+                var firstName = row.Cell(2).GetString();
+                var middleName = row.Cell(3).GetString();
+                var passportSeries = row.Cell(6).GetString();
+                var passportNumber = row.Cell(7).GetString();
+
+                if (string.IsNullOrWhiteSpace(lastName) || string.IsNullOrWhiteSpace(firstName) ||
+                    string.IsNullOrWhiteSpace(passportSeries) || string.IsNullOrWhiteSpace(passportNumber))
+                {
+                    continue;
+                }
+
+                records.Add(new VisitorImportModel
+                {
+                    LastName = lastName.Trim(),
+                    FirstName = firstName.Trim(),
+                    MiddleName = string.IsNullOrWhiteSpace(middleName) ? null : middleName.Trim(),
+                    Phone = NormalizePhone(row.Cell(4).GetString()),
+                    Email = string.IsNullOrWhiteSpace(row.Cell(5).GetString()) ? null : row.Cell(5).GetString().Trim(),
+                    PassportSeries = passportSeries.Trim(),
+                    PassportNumber = passportNumber.Trim()
+                });
+            }
+
+            return records;
+        }
+
+        private async Task<int> UpsertVisitorsAsync(List<VisitorImportModel> records)
+        {
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            records = records
+                .GroupBy(r => r.PassportKey, StringComparer.OrdinalIgnoreCase)
+                .Select(MergeVisitorRecords)
+                .ToList();
+
+            var groupNames = records
+                .Select(r => r.GroupName)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var groupMap = groupNames.Count > 0
+                ? await _context.Groups
+                    .Where(g => g.GroupName != null && groupNames.Contains(g.GroupName))
+                    .ToDictionaryAsync(g => g.GroupName!, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, Group>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var name in groupNames)
+            {
+                if (groupMap.ContainsKey(name))
+                {
+                    continue;
+                }
+
+                var description = records
+                    .FirstOrDefault(r => string.Equals(r.GroupName, name, StringComparison.OrdinalIgnoreCase))?
+                    .GroupDescription;
+
+                var group = new Group
+                {
+                    GroupName = name,
+                    Description = string.IsNullOrWhiteSpace(description) ? null : description
+                };
+
+                _context.Groups.Add(group);
+                groupMap[name] = group;
+            }
+
+            foreach (var record in records)
+            {
+                if (!string.IsNullOrWhiteSpace(record.GroupName) &&
+                    groupMap.TryGetValue(record.GroupName!, out var groupRef) &&
+                    string.IsNullOrWhiteSpace(groupRef.Description) &&
+                    !string.IsNullOrWhiteSpace(record.GroupDescription))
+                {
+                    groupRef.Description = record.GroupDescription;
+                }
+            }
+
+            var passportKeys = records
+                .Select(r => r.PassportKey)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var existing = passportKeys.Count > 0
+                ? await _context.PassVisitors
+                    .Include(v => v.Group)
+                    .Where(v => passportKeys.Contains(v.PassportSeries + v.PassportNumber))
+                    .ToDictionaryAsync(v => v.PassportSeries + v.PassportNumber, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, PassVisitor>(StringComparer.OrdinalIgnoreCase);
+
+            var imported = 0;
+            foreach (var record in records)
+            {
+                var key = record.PassportKey;
+                existing.TryGetValue(key, out var visitor);
+
+                Group? group = null;
+                if (!string.IsNullOrWhiteSpace(record.GroupName) &&
+                    groupMap.TryGetValue(record.GroupName!, out var resolvedGroup))
+                {
+                    group = resolvedGroup;
+                }
+
+                if (visitor == null)
+                {
+                    visitor = new PassVisitor
+                    {
+                        LastName = record.LastName,
+                        FirstName = record.FirstName,
+                        MiddleName = record.MiddleName,
+                        Phone = record.Phone,
+                        Email = record.Email,
+                        BirthDate = record.BirthDate,
+                        PassportSeries = record.PassportSeries,
+                        PassportNumber = record.PassportNumber,
+                        Group = group
+                    };
+
+                    _context.PassVisitors.Add(visitor);
+                    existing[key] = visitor;
+                    imported++;
+                }
+                else
+                {
+                    visitor.LastName = record.LastName;
+                    visitor.FirstName = record.FirstName;
+                    visitor.MiddleName = record.MiddleName;
+                    visitor.Phone = record.Phone;
+                    visitor.Email = record.Email;
+                    visitor.BirthDate = record.BirthDate;
+                    if (group != null)
+                    {
+                        visitor.Group = group;
+                    }
+                }
+
+                if (group != null)
+                {
+                    visitor.Group = group;
+                }
+            }
+
+            if (_context.ChangeTracker.HasChanges())
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return imported;
+        }
+
+        private static VisitorImportModel MergeVisitorRecords(IGrouping<string, VisitorImportModel> group)
+        {
+            var result = new VisitorImportModel
+            {
+                PassportSeries = group.First().PassportSeries,
+                PassportNumber = group.First().PassportNumber
+            };
+
+            foreach (var record in group)
+            {
+                if (!string.IsNullOrWhiteSpace(record.LastName))
+                {
+                    result.LastName = record.LastName;
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.FirstName))
+                {
+                    result.FirstName = record.FirstName;
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.MiddleName))
+                {
+                    result.MiddleName = record.MiddleName;
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.Phone))
+                {
+                    result.Phone = record.Phone;
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.Email))
+                {
+                    result.Email = record.Email;
+                }
+
+                if (record.BirthDate.HasValue)
+                {
+                    result.BirthDate = record.BirthDate;
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.GroupName))
+                {
+                    result.GroupName = record.GroupName;
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.GroupDescription))
+                {
+                    result.GroupDescription = record.GroupDescription;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(result.LastName))
+            {
+                result.LastName = group.First().LastName;
+            }
+
+            if (string.IsNullOrWhiteSpace(result.FirstName))
+            {
+                result.FirstName = group.First().FirstName;
+            }
+
+            return result;
+        }
+
+        private List<EmployeeImportModel> BuildEmployeeRecordsFromHeaders(
+            IReadOnlyCollection<IXLRangeRow> rows,
+            IReadOnlyDictionary<string, int> headerMap)
+        {
+            var records = new List<EmployeeImportModel>();
+            foreach (var row in rows)
+            {
+                var fullName = GetString(row, headerMap, EmployeeFullNameHeaders);
+                if (string.IsNullOrWhiteSpace(fullName))
+                {
+                    continue;
+                }
+
+                var primaryDepartment = NormalizeDepartmentValue(GetString(row, headerMap, EmployeeDepartmentHeaders));
+                var secondaryDepartment = NormalizeDepartmentValue(GetString(row, headerMap, EmployeeSubDepartmentHeaders));
+                var departmentName = primaryDepartment ?? secondaryDepartment;
+
+                string? departmentDescription = null;
+                if (!string.IsNullOrWhiteSpace(primaryDepartment) &&
+                    !string.IsNullOrWhiteSpace(secondaryDepartment) &&
+                    !string.Equals(primaryDepartment, secondaryDepartment, StringComparison.OrdinalIgnoreCase))
+                {
+                    departmentDescription = secondaryDepartment;
+                }
+                else if (string.IsNullOrWhiteSpace(primaryDepartment) && !string.IsNullOrWhiteSpace(secondaryDepartment))
+                {
+                    departmentDescription = secondaryDepartment;
+                }
+
+                records.Add(new EmployeeImportModel
+                {
+                    FullName = fullName.Trim(),
+                    EmployeeCode = NormalizeEmployeeCode(GetString(row, headerMap, EmployeeCodeHeaders)),
+                    DepartmentName = departmentName,
+                    DepartmentDescription = departmentDescription
+                });
+            }
+
+            return records;
+        }
+
+        private static List<EmployeeImportModel> BuildEmployeeRecordsFromLegacy(IReadOnlyCollection<IXLRangeRow> rows)
+        {
+            var records = new List<EmployeeImportModel>();
+            foreach (var row in rows)
+            {
+                var fullName = row.Cell(1).GetString();
+                if (string.IsNullOrWhiteSpace(fullName))
+                {
+                    continue;
+                }
+
+                var employeeCode = row.Cell(2).GetString();
+                var departmentId = row.Cell(3).GetValue<int?>();
+
+                records.Add(new EmployeeImportModel
+                {
+                    FullName = fullName.Trim(),
+                    EmployeeCode = string.IsNullOrWhiteSpace(employeeCode) ? null : employeeCode.Trim(),
+                    DepartmentId = departmentId
+                });
+            }
+
+            return records;
+        }
+
+        private async Task<int> UpsertEmployeesAsync(List<EmployeeImportModel> records)
+        {
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            records = records
+                .GroupBy(r => string.IsNullOrWhiteSpace(r.EmployeeCode) ? r.FullName : r.EmployeeCode!, StringComparer.OrdinalIgnoreCase)
+                .Select(MergeEmployeeRecords)
+                .ToList();
+
+            var departmentNames = records
+                .Select(r => r.DepartmentName)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var departmentMap = departmentNames.Count > 0
+                ? await _context.Departments
+                    .Where(d => departmentNames.Contains(d.Name))
+                    .ToDictionaryAsync(d => d.Name, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, Department>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var name in departmentNames)
+            {
+                if (departmentMap.ContainsKey(name))
+                {
+                    continue;
+                }
+
+                var description = records
+                    .FirstOrDefault(r => string.Equals(r.DepartmentName, name, StringComparison.OrdinalIgnoreCase))?
+                    .DepartmentDescription;
+
+                var department = new Department
+                {
+                    Name = name,
+                    Description = string.IsNullOrWhiteSpace(description) ? null : description
+                };
+
+                _context.Departments.Add(department);
+                departmentMap[name] = department;
+            }
+
+            foreach (var record in records)
+            {
+                if (!string.IsNullOrWhiteSpace(record.DepartmentName) &&
+                    departmentMap.TryGetValue(record.DepartmentName, out var department) &&
+                    string.IsNullOrWhiteSpace(department.Description) &&
+                    !string.IsNullOrWhiteSpace(record.DepartmentDescription))
+                {
+                    department.Description = record.DepartmentDescription;
+                }
+            }
+
+            var codes = records
+                .Where(r => !string.IsNullOrWhiteSpace(r.EmployeeCode))
+                .Select(r => r.EmployeeCode!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var existingByCode = codes.Count > 0
+                ? await _context.Employees
+                    .Where(e => e.EmployeeCode != null && codes.Contains(e.EmployeeCode))
+                    .ToDictionaryAsync(e => e.EmployeeCode!, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, Employee>(StringComparer.OrdinalIgnoreCase);
+
+            var names = records
+                .Select(r => r.FullName)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var existingByName = names.Count > 0
+                ? await _context.Employees
+                    .Where(e => names.Contains(e.FullName))
+                    .ToDictionaryAsync(e => e.FullName, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, Employee>(StringComparer.OrdinalIgnoreCase);
+
+            var imported = 0;
+            foreach (var record in records)
+            {
+                Employee? employee = null;
+                if (!string.IsNullOrWhiteSpace(record.EmployeeCode) &&
+                    existingByCode.TryGetValue(record.EmployeeCode, out var byCode))
+                {
+                    employee = byCode;
+                }
+                else if (existingByName.TryGetValue(record.FullName, out var byName))
+                {
+                    employee = byName;
+                }
+
+                Department? department = null;
+                if (!string.IsNullOrWhiteSpace(record.DepartmentName) &&
+                    departmentMap.TryGetValue(record.DepartmentName, out var mappedDepartment))
+                {
+                    department = mappedDepartment;
+                }
+
+                var departmentId = record.DepartmentId ?? department?.Id;
+
+                if (employee == null)
+                {
+                    employee = new Employee
+                    {
+                        FullName = record.FullName,
+                        EmployeeCode = record.EmployeeCode,
+                        DepartmentId = departmentId
+                    };
+
+                    if (department != null)
+                    {
+                        employee.Department = department;
+                    }
+
+                    _context.Employees.Add(employee);
+                    imported++;
+
+                    if (!string.IsNullOrWhiteSpace(record.EmployeeCode))
+                    {
+                        existingByCode[record.EmployeeCode] = employee;
+                    }
+
+                    existingByName[record.FullName] = employee;
+                }
+                else
+                {
+                    employee.FullName = record.FullName;
+                    if (!string.IsNullOrWhiteSpace(record.EmployeeCode))
+                    {
+                        employee.EmployeeCode = record.EmployeeCode;
+                    }
+                }
+
+                if (department != null)
+                {
+                    employee.Department = department;
+                }
+                else if (departmentId.HasValue)
+                {
+                    employee.DepartmentId = departmentId;
+                }
+            }
+
+            if (_context.ChangeTracker.HasChanges())
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return imported;
+        }
+
+        private static EmployeeImportModel MergeEmployeeRecords(IGrouping<string, EmployeeImportModel> group)
+        {
+            var result = new EmployeeImportModel
+            {
+                FullName = group.First().FullName,
+                EmployeeCode = group.First().EmployeeCode,
+                DepartmentId = group.First().DepartmentId,
+                DepartmentName = group.First().DepartmentName,
+                DepartmentDescription = group.First().DepartmentDescription
+            };
+
+            foreach (var record in group)
+            {
+                if (!string.IsNullOrWhiteSpace(record.FullName))
+                {
+                    result.FullName = record.FullName;
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.EmployeeCode))
+                {
+                    result.EmployeeCode = record.EmployeeCode;
+                }
+
+                if (record.DepartmentId.HasValue)
+                {
+                    result.DepartmentId = record.DepartmentId;
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.DepartmentName))
+                {
+                    result.DepartmentName = record.DepartmentName;
+                }
+
+                if (!string.IsNullOrWhiteSpace(record.DepartmentDescription))
+                {
+                    result.DepartmentDescription = record.DepartmentDescription;
+                }
+            }
+
+            return result;
+        }
+
+        private static string? NormalizeDepartmentValue(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var trimmed = value.Trim();
+            if (trimmed == "-" || trimmed == "—" || trimmed.Equals("нет", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return trimmed;
+        }
+
+        private static string? NormalizeEmployeeCode(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static string? NormalizePhone(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var trimmed = value.Trim();
+            var digits = Regex.Replace(trimmed, "\\D", string.Empty);
+
+            if (digits.Length == 11 && digits.StartsWith("8"))
+            {
+                digits = "7" + digits.Substring(1);
+            }
+
+            if (digits.Length == 11 && digits.StartsWith("7"))
+            {
+                return "+" + digits;
+            }
+
+            if (digits.Length == 10)
+            {
+                return "+7" + digits;
+            }
+
+            return trimmed;
+        }
+
+        private static string? NormalizeGroupName(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var trimmed = value.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+        }
+
+        private static string? NormalizeGroupDescription(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            return value.Trim();
+        }
+
+        private static DateTime? ParseFlexibleDate(DateTime? dateValue, string? textValue)
+        {
+            if (dateValue.HasValue)
+            {
+                return dateValue;
+            }
+
+            if (string.IsNullOrWhiteSpace(textValue))
+            {
+                return null;
+            }
+
+            var normalized = textValue.Replace("года", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
+            if (DateTime.TryParse(normalized, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed) ||
+                DateTime.TryParse(normalized, new CultureInfo("ru-RU"), DateTimeStyles.AssumeLocal, out parsed))
+            {
+                return parsed;
+            }
+
+            return null;
+        }
+
+        private static (string? LastName, string? FirstName, string? MiddleName) SplitFullName(string? fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                return (null, null, null);
+            }
+
+            var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length switch
+            {
+                0 => (null, null, null),
+                1 => (parts[0], parts[0], null),
+                2 => (parts[0], parts[1], null),
+                _ => (parts[0], parts[1], string.Join(" ", parts.Skip(2)))
+            };
+        }
+
+        private static (string? Series, string? Number) SplitPassport(string? passport)
+        {
+            if (string.IsNullOrWhiteSpace(passport))
+            {
+                return (null, null);
+            }
+
+            var digits = Regex.Replace(passport, "\\D", string.Empty);
+            if (digits.Length < 10)
+            {
+                return (null, null);
+            }
+
+            var series = digits.Substring(0, 4);
+            var number = digits.Substring(4);
+            if (number.Length < 6)
+            {
+                return (null, null);
+            }
+
+            return (series, number.Substring(0, 6));
+        }
+
+        private sealed class VisitorImportModel
+        {
+            public string LastName { get; set; } = string.Empty;
+            public string FirstName { get; set; } = string.Empty;
+            public string? MiddleName { get; set; }
+            public string? Phone { get; set; }
+            public string? Email { get; set; }
+            public DateTime? BirthDate { get; set; }
+            public string PassportSeries { get; set; } = string.Empty;
+            public string PassportNumber { get; set; } = string.Empty;
+            public string? GroupName { get; set; }
+            public string? GroupDescription { get; set; }
+            public string PassportKey => PassportSeries + PassportNumber;
+        }
+
+        private sealed class EmployeeImportModel
+        {
+            public string FullName { get; set; } = string.Empty;
+            public string? EmployeeCode { get; set; }
+            public int? DepartmentId { get; set; }
+            public string? DepartmentName { get; set; }
+            public string? DepartmentDescription { get; set; }
         }
 
         private static Dictionary<string, int> BuildHeaderMap(IXLRangeRow headerRow)
