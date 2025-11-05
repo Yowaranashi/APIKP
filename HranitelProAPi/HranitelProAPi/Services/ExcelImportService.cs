@@ -140,7 +140,6 @@ namespace HranitelPRO.API.Services
 
             var headerMap = BuildHeaderMap(rows.First());
             var dataRows = rows.Skip(1).ToList();
-
             var records = headerMap.Count > 0
                 ? BuildEmployeeRecordsFromHeaders(dataRows, headerMap)
                 : new List<EmployeeImportModel>();
@@ -164,7 +163,6 @@ namespace HranitelPRO.API.Services
             {
                 throw new ArgumentNullException(nameof(file));
             }
-
             using var stream = new MemoryStream();
             await file.CopyToAsync(stream);
             stream.Position = 0;

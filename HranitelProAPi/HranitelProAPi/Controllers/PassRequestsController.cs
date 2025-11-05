@@ -326,7 +326,7 @@ namespace HranitelPRO.API.Controllers
                 .Include(p => p.ResponsibleEmployee)
                 .Include(p => p.StatusRef)
                 .Include(p => p.Visitors)
-                    .ThenInclude(v => v.Group)
+                .ThenInclude(v => v.Group)
                 .FirstAsync(p => p.Id == id);
         }
 
