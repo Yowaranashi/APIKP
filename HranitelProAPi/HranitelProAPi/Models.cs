@@ -93,7 +93,7 @@ namespace HranitelPRO.API.Models
         [MaxLength(2000)]
         public string? RejectionReason { get; set; }
         public int? GroupSize { get; set; }
-        public ICollection<PassVisitor>? Visitors { get; set; }
+        public ICollection<PassVisitor> Visitors { get; set; } = new List<PassVisitor>();
         public ICollection<FileAttachment>? Attachments { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int? CheckedByUserId { get; set; }

@@ -733,7 +733,7 @@ namespace HranitelPRO.API.Controllers
 
         private static string SanitizeFileName(string fileName)
         {
-            var cleaned = Regex.Replace(fileName, "[^\w\d\-.]+", "_", RegexOptions.Compiled);
+            var cleaned = Regex.Replace(fileName, @"[^\w\d\-.]+", "_", RegexOptions.Compiled);
             return string.IsNullOrWhiteSpace(cleaned) ? Guid.NewGuid().ToString("N") : cleaned;
         }
 
@@ -760,7 +760,7 @@ namespace HranitelPRO.API.Controllers
                 return (null, null);
             }
 
-            var digits = Regex.Replace(passport, "\\D", string.Empty);
+            var digits = Regex.Replace(passport, @"\D", string.Empty);
             if (digits.Length < 10)
             {
                 return (null, null);
