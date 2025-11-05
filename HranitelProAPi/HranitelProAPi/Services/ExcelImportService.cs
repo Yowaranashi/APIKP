@@ -4,13 +4,14 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Text.RegularExpressions;
+using Regex = System.Text.RegularExpressions.Regex;
 using ClosedXML.Excel;
 using HranitelPro.API.Data;
 using HranitelPRO.API.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using GroupModel = HranitelPRO.API.Models.Group;
 
 namespace HranitelPRO.API.Services
 {
@@ -491,7 +492,7 @@ namespace HranitelPRO.API.Services
                     continue;
                 }
 
-                group = new Group
+                group = new GroupModel
                 {
                     GroupName = record.Name,
                     Description = record.Description
@@ -924,7 +925,7 @@ namespace HranitelPRO.API.Services
                 ? await _context.Groups
                     .Where(g => g.GroupName != null && groupNames.Contains(g.GroupName))
                     .ToDictionaryAsync(g => g.GroupName!, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, Group>(StringComparer.OrdinalIgnoreCase);
+                : new Dictionary<string, GroupModel>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var name in groupNames)
             {
@@ -937,7 +938,7 @@ namespace HranitelPRO.API.Services
                     .FirstOrDefault(r => string.Equals(r.GroupName, name, StringComparison.OrdinalIgnoreCase))?
                     .GroupDescription;
 
-                var group = new Group
+                var group = new GroupModel
                 {
                     GroupName = name,
                     Description = string.IsNullOrWhiteSpace(description) ? null : description
@@ -976,7 +977,7 @@ namespace HranitelPRO.API.Services
                 var key = record.PassportKey;
                 existing.TryGetValue(key, out var visitor);
 
-                Group? group = null;
+                GroupModel? group = null;
                 if (!string.IsNullOrWhiteSpace(record.GroupName) &&
                     groupMap.TryGetValue(record.GroupName!, out var resolvedGroup))
                 {
