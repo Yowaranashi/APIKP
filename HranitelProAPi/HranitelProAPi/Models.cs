@@ -108,8 +108,8 @@ namespace HranitelPRO.API.Models
     {
         [Key]
         public int Id { get; set; }
-        public int PassRequestId { get; set; }
-        public PassRequest PassRequest { get; set; } = null!;
+        public int? PassRequestId { get; set; }
+        public PassRequest? PassRequest { get; set; }
         [Required, MaxLength(100)]
         public string LastName { get; set; } = null!;
         [Required, MaxLength(100)]
