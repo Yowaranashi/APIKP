@@ -104,7 +104,7 @@ CREATE TABLE Groups (
 
 CREATE TABLE PassVisitors (
     Id INT IDENTITY PRIMARY KEY,
-    PassRequestId INT NOT NULL,
+    PassRequestId INT NULL,
     LastName NVARCHAR(100) NOT NULL,
     FirstName NVARCHAR(100) NOT NULL,
     MiddleName NVARCHAR(100) NULL,
