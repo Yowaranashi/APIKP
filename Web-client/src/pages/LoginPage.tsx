@@ -33,13 +33,14 @@ export const LoginPage = () => {
 
   return (
     <section className="mx-auto mt-10 max-w-lg rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-      <h1 className="mb-6 text-2xl font-semibold text-primary">Вход в систему</h1>
+      <h1 className="mb-6 text-2xl font-semibold text-primary">Вход для посетителей</h1>
       <p className="mb-8 text-sm text-slate-500">
-        Используйте учетные данные для входа. Если у вас нет аккаунта,{' '}
+        Введите email и пароль, указанные при регистрации личного кабинета посетителя. Если у вас нет аккаунта,{' '}
         <Link to="/register" className="text-primary hover:underline">
           зарегистрируйтесь
         </Link>
         .
+        <br />Доступ сотрудников по внутренним учетным данным осуществляется через корпоративный портал.
       </p>
       <form className="flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
         <FormInput label="Email" type="email" error={formState.errors.email} {...register('email')} />

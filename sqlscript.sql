@@ -323,6 +323,7 @@ INSERT INTO Roles (Name, Description) VALUES (N'Администратор си�
 INSERT INTO Roles (Name, Description) VALUES (N'Оператор пропусков', N'Обработка заявок на посещение и управление посетителями.');
 INSERT INTO Roles (Name, Description) VALUES (N'Сотрудник безопасности', N'Контроль доступа и журналирование инцидентов.');
 INSERT INTO Roles (Name, Description) VALUES (N'Сотрудник подразделения', N'Работа с заявками и посещениями своего подразделения.');
+INSERT INTO Roles (Name, Description) VALUES (N'Посетитель', N'Доступ к личному кабинету посетителя для подачи заявок и отслеживания статусов.');
 GO
 
 -- Departments
@@ -408,7 +409,40 @@ SELECT
 FROM Employees e
 JOIN Roles r ON r.Name = N'Сотрудник подразделения'
 WHERE e.EmployeeCode = N'9736379';
-GO
+
+-- Visitor accounts
+INSERT INTO Users (FullName, Email, PasswordHash, EmailConfirmed, EmployeeId, RoleId)
+VALUES
+    (N'Степанова Радинка Власовна', N'Radinka100@yandex.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'b3uWS6#Thuvq'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Шилов Прохор Герасимович', N'Prohor156@list.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'zDdom}SIhWs?'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Кононов Юрин Романович', N'YUrin155@gmail.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'u@m*~ACBCqNQ'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Елисеева Альбина Николаевна', N'Aljbina33@lenta.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'Bu?BHCtwDFin'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Шарова Клавдия Макаровна', N'Klavdiya113@live.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'FjC#hNIJori}'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Сидорова Тамара Григорьевна', N'Tamara179@live.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'TJxVqMXrbesI'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Петухов Тарас Фадеевич', N'Taras24@rambler.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'07m5yspn3K~K'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Родионов Аркадий Власович', N'Arkadij123@inbox.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'vk2N7lxX}ck%'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Горшкова Глафира Валентиновна', N'Glafira73@outlook.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'Zz8POQlP}M4~'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Кириллова Гавриила Яковна', N'Gavriila68@msn.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'x4K5WthEe8ua'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Овчинников Кузьма Ефимович', N'Kuzjma124@yandex.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'OsByQJ}vYznW'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Беляков Роман Викторович', N'Roman89@gmail.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'Xd?xP$2yICcG'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Лыткин Алексей Максимович', N'Aleksej43@gmail.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'~c%PlTY0?qgl'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Шубина Надежда Викторовна', N'Nadezhda137@outlook.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'QQ~0q~rXHb?p'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Зиновьева Бронислава Викторовна', N'Bronislava56@yahoo.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'LO}xyC~1S4l6'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Самойлова Таисия Гермоновна', N'Taisiya177@lenta.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'R94YGT3XFjgD'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Ситникова Аделаида Гермоновна', N'Adelaida20@hotmail.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'LCY*{L*fEGYB'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Исаев Лев Юлианович', N'Lev131@rambler.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'~?oj2Lh@S7*T'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Никифоров Даниил Степанович', N'Daniil198@bk.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'L2W#uo7z{EsO'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Титова Людмила Якововна', N'Lyudmila123@hotmail.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'@8mk9M?NBAGj'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Абрамова Таисия Дмитриевна', N'Taisiya176@hotmail.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'~rIWfsnXA~7C'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Кузьмина Вера Максимовна', N'Vera195@list.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'B|5v$2r$7luL'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Мартынов Яков Ростиславович', N'YAkov196@rambler.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'$6s5bggKP7aw'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Евсеева Нина Павловна', N'Nina145@msn.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'Uxy6RtBXIcpT'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Голубев Леонтий Вячеславович', N'Leontij161@mail.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'KkMY8yKw@oCa'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Карпова Серафима Михаиловна', N'Serafima169@yahoo.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'gNe3I9}8J3Z@'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Орехов Сергей Емельянович', N'Sergej35@inbox.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'$39vc%ljqN%r'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Исаев Георгий Павлович', N'Georgij121@inbox.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'bbx5H}f*BC?w'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Богданов Елизар Артемович', N'Elizar30@yandex.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'wJs1~r3RS~dr'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
+    (N'Тихонова Лана Семеновна', N'Lana117@outlook.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'mFoG$jcS3c4~'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель'));
 
 -- Pass requests generated from visitor assignments
 INSERT INTO PassRequests (RequestType, StartDate, EndDate, Purpose, DepartmentId, ResponsibleEmployeeId, Phone, ApplicantEmail, StatusID, GroupSize, Note) SELECT 'Personal', '2023-04-24T09:00:00', '2023-04-24T18:00:00', N'Назначение 24/04/2023_9367788', e.DepartmentId, e.Id, N'+7 (613) 272-60-62', N'Radinka100@yandex.ru', s.StatusID, 16, N'Создано на основе предоставленных данных' FROM Employees e CROSS JOIN ApplicationStatuses s WHERE e.EmployeeCode = N'9367788' AND s.StatusName = N'Pending';
