@@ -91,7 +91,9 @@ namespace HranitelPRO.API.Services
             }
 
             var headerMap = BuildHeaderMap(rows.First());
-            var dataRows = rows.Skip(1).ToList();
+            var dataRows = headerMap.Count > 0
+                ? rows.Skip(1).ToList()
+                : rows.ToList();
 
             var records = headerMap.Count > 0
                 ? BuildVisitorRecordsFromHeaders(dataRows, headerMap)
@@ -140,7 +142,9 @@ namespace HranitelPRO.API.Services
             }
 
             var headerMap = BuildHeaderMap(rows.First());
-            var dataRows = rows.Skip(1).ToList();
+            var dataRows = headerMap.Count > 0
+                ? rows.Skip(1).ToList()
+                : rows.ToList();
             var records = headerMap.Count > 0
                 ? BuildEmployeeRecordsFromHeaders(dataRows, headerMap)
                 : new List<EmployeeImportModel>();

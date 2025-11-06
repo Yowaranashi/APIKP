@@ -104,7 +104,7 @@ CREATE TABLE Groups (
 
 CREATE TABLE PassVisitors (
     Id INT IDENTITY PRIMARY KEY,
-    PassRequestId INT NOT NULL,
+    PassRequestId INT NULL,
     LastName NVARCHAR(100) NOT NULL,
     FirstName NVARCHAR(100) NOT NULL,
     MiddleName NVARCHAR(100) NULL,
@@ -443,7 +443,6 @@ VALUES
     (N'Исаев Георгий Павлович', N'Georgij121@inbox.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'bbx5H}f*BC?w'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
     (N'Богданов Елизар Артемович', N'Elizar30@yandex.ru', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'wJs1~r3RS~dr'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель')),
     (N'Тихонова Лана Семеновна', N'Lana117@outlook.com', CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', N'mFoG$jcS3c4~'), 2), 1, NULL, (SELECT Id FROM Roles WHERE Name = N'Посетитель'));
-GO
 
 -- Pass requests generated from visitor assignments
 INSERT INTO PassRequests (RequestType, StartDate, EndDate, Purpose, DepartmentId, ResponsibleEmployeeId, Phone, ApplicantEmail, StatusID, GroupSize, Note) SELECT 'Personal', '2023-04-24T09:00:00', '2023-04-24T18:00:00', N'Назначение 24/04/2023_9367788', e.DepartmentId, e.Id, N'+7 (613) 272-60-62', N'Radinka100@yandex.ru', s.StatusID, 16, N'Создано на основе предоставленных данных' FROM Employees e CROSS JOIN ApplicationStatuses s WHERE e.EmployeeCode = N'9367788' AND s.StatusName = N'Pending';

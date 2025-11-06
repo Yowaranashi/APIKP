@@ -1,10 +1,14 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using HranitelPRO.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace HranitelPRO.API.Controllers
 {
@@ -14,10 +18,12 @@ namespace HranitelPRO.API.Controllers
     public class ImportController : ControllerBase
     {
         private readonly IExcelImportService _importService;
+        private readonly ILogger<ImportController> _logger;
 
-        public ImportController(IExcelImportService importService)
+        public ImportController(IExcelImportService importService, ILogger<ImportController> logger)
         {
             _importService = importService;
+            _logger = logger;
         }
 
         [HttpPost("visitors")]
@@ -30,8 +36,11 @@ namespace HranitelPRO.API.Controllers
                 return errorResult;
             }
 
-            var imported = await _importService.ImportVisitorsAsync(request.File!);
-            return Ok(new { imported });
+            return await ExecuteImportAsync(async () =>
+            {
+                var imported = await _importService.ImportVisitorsAsync(request.File!);
+                return new { imported };
+            }, "посетителей");
         }
 
 
@@ -45,8 +54,11 @@ namespace HranitelPRO.API.Controllers
                 return errorResult;
             }
 
-            var imported = await _importService.ImportDepartmentsAsync(request.File!);
-            return Ok(new { imported });
+            return await ExecuteImportAsync(async () =>
+            {
+                var imported = await _importService.ImportDepartmentsAsync(request.File!);
+                return new { imported };
+            }, "подразделений");
         }
 
         [HttpPost("roles")]
@@ -59,8 +71,11 @@ namespace HranitelPRO.API.Controllers
                 return errorResult;
             }
 
-            var imported = await _importService.ImportRolesAsync(request.File!);
-            return Ok(new { imported });
+            return await ExecuteImportAsync(async () =>
+            {
+                var imported = await _importService.ImportRolesAsync(request.File!);
+                return new { imported };
+            }, "ролей");
         }
 
         [HttpPost("statuses")]
@@ -73,8 +88,11 @@ namespace HranitelPRO.API.Controllers
                 return errorResult;
             }
 
-            var imported = await _importService.ImportStatusesAsync(request.File!);
-            return Ok(new { imported });
+            return await ExecuteImportAsync(async () =>
+            {
+                var imported = await _importService.ImportStatusesAsync(request.File!);
+                return new { imported };
+            }, "статусов");
         }
 
         [HttpPost("groups")]
@@ -87,8 +105,11 @@ namespace HranitelPRO.API.Controllers
                 return errorResult;
             }
 
-            var imported = await _importService.ImportGroupsAsync(request.File!);
-            return Ok(new { imported });
+            return await ExecuteImportAsync(async () =>
+            {
+                var imported = await _importService.ImportGroupsAsync(request.File!);
+                return new { imported };
+            }, "групп");
         }
 
         [HttpPost("employees")]
@@ -101,8 +122,11 @@ namespace HranitelPRO.API.Controllers
                 return errorResult;
             }
 
-            var imported = await _importService.ImportEmployeesAsync(request.File!);
-            return Ok(new { imported });
+            return await ExecuteImportAsync(async () =>
+            {
+                var imported = await _importService.ImportEmployeesAsync(request.File!);
+                return new { imported };
+            }, "сотрудников");
         }
 
         [HttpPost("sessions")]
@@ -115,14 +139,17 @@ namespace HranitelPRO.API.Controllers
                 return errorResult;
             }
 
-            var result = await _importService.ImportSessionsAsync(new SessionImportOptions
+            return await ExecuteImportAsync(async () =>
             {
-                ExcelFile = request.Excel!,
-                Attachments = request.Attachments?.ToArray() ?? Array.Empty<IFormFile>()
+                var result = await _importService.ImportSessionsAsync(new SessionImportOptions
+                {
+                    ExcelFile = request.Excel!,
+                    Attachments = request.Attachments?.ToArray() ?? Array.Empty<IFormFile>()
 
-            });
+                });
 
-            return Ok(result);
+                return result;
+            }, "сессий");
         }
 
         private ActionResult? ValidateFile(IFormFile? file, string errorMessage = "Файл не найден")
@@ -133,6 +160,51 @@ namespace HranitelPRO.API.Controllers
             }
 
             return null;
+        }
+
+        private async Task<ActionResult> ExecuteImportAsync<T>(Func<Task<T>> importOperation, string importTarget)
+        {
+            try
+            {
+                var result = await importOperation();
+                return Ok(result);
+            }
+            catch (InvalidDataException ex)
+            {
+                _logger.LogWarning(ex, "Некорректный файл для импорта {ImportTarget}", importTarget);
+                return BadRequest(new
+                {
+                    message = "Некорректный формат файла",
+                    detail = ex.Message
+                });
+            }
+            catch (FormatException ex)
+            {
+                _logger.LogWarning(ex, "Некорректные данные в файле для импорта {ImportTarget}", importTarget);
+                return BadRequest(new
+                {
+                    message = "Некорректные данные в файле",
+                    detail = ex.Message
+                });
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Ошибка базы данных при импорте {ImportTarget}", importTarget);
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Ошибка сохранения данных",
+                    detail = ex.GetBaseException().Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Непредвиденная ошибка при импорте {ImportTarget}", importTarget);
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Произошла внутренняя ошибка при импорте",
+                    detail = ex.Message
+                });
+            }
         }
     }
 

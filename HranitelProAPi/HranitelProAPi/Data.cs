@@ -78,6 +78,7 @@ namespace HranitelPro.API.Data
                 .HasOne(v => v.PassRequest)
                 .WithMany(p => p.Visitors)
                 .HasForeignKey(v => v.PassRequestId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<PassVisitor>()
