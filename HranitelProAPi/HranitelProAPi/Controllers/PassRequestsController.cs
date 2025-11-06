@@ -123,6 +123,7 @@ namespace HranitelPRO.API.Controllers
         [HttpPost]
         [AllowAnonymous]
         [Consumes("multipart/form-data")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public Task<ActionResult<PassRequestDetailsDto>> Create([FromForm] PassRequestFormDto formDto)
         {
             var (mappedDto, mappingErrors) = MapFormToCreateDto(formDto);
