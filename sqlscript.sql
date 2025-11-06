@@ -318,6 +318,13 @@ GO
 ------------------------------------------------------------
 -- 10. Seed data generated from provided visitor tables
 ------------------------------------------------------------
+-- Roles
+INSERT INTO Roles (Name, Description) VALUES (N'Администратор системы', N'Полный доступ к настройкам и управлению платформой.');
+INSERT INTO Roles (Name, Description) VALUES (N'Оператор пропусков', N'Обработка заявок на посещение и управление посетителями.');
+INSERT INTO Roles (Name, Description) VALUES (N'Сотрудник безопасности', N'Контроль доступа и журналирование инцидентов.');
+INSERT INTO Roles (Name, Description) VALUES (N'Сотрудник подразделения', N'Работа с заявками и посещениями своего подразделения.');
+GO
+
 -- Departments
 INSERT INTO Departments (Name) VALUES (N'Производство');
 INSERT INTO Departments (Name) VALUES (N'Сбыт');
@@ -341,6 +348,66 @@ INSERT INTO Employees (FullName, EmployeeCode, DepartmentId) VALUES (N'Орех�
 INSERT INTO Employees (FullName, EmployeeCode, DepartmentId) VALUES (N'Савельев Павел Степанович', N'9768239', (SELECT Id FROM Departments WHERE Name = N'Общий отдел'));
 INSERT INTO Employees (FullName, EmployeeCode, DepartmentId) VALUES (N'Чернов Всеволод Наумович', N'9404040', (SELECT Id FROM Departments WHERE Name = N'Охрана'));
 INSERT INTO Employees (FullName, EmployeeCode, DepartmentId) VALUES (N'Марков Юрий Романович', NULL, NULL);
+GO
+
+-- Users
+INSERT INTO Users (FullName, Email, PasswordHash, EmailConfirmed, EmployeeId, RoleId)
+VALUES (
+    N'Администратор системы',
+    N'admin@hranitelpro.local',
+    CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', 'Admin@Hranitel2023'), 2),
+    1,
+    NULL,
+    (SELECT Id FROM Roles WHERE Name = N'Администратор системы')
+);
+
+INSERT INTO Users (FullName, Email, PasswordHash, EmailConfirmed, EmployeeId, RoleId)
+SELECT
+    e.FullName,
+    N'afomicheva@hranitelpro.local',
+    CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', 'Fomicheva#Pass1'), 2),
+    1,
+    e.Id,
+    r.Id
+FROM Employees e
+JOIN Roles r ON r.Name = N'Оператор пропусков'
+WHERE e.EmployeeCode = N'9367788';
+
+INSERT INTO Users (FullName, Email, PasswordHash, EmailConfirmed, EmployeeId, RoleId)
+SELECT
+    e.FullName,
+    N'tarchipov@hranitelpro.local',
+    CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', 'Security!Archipov'), 2),
+    1,
+    e.Id,
+    r.Id
+FROM Employees e
+JOIN Roles r ON r.Name = N'Сотрудник безопасности'
+WHERE e.EmployeeCode = N'9362832';
+
+INSERT INTO Users (FullName, Email, PasswordHash, EmailConfirmed, EmployeeId, RoleId)
+SELECT
+    e.FullName,
+    N'rgavrilova@hranitelpro.local',
+    CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', 'SalesRimma2023'), 2),
+    1,
+    e.Id,
+    r.Id
+FROM Employees e
+JOIN Roles r ON r.Name = N'Сотрудник подразделения'
+WHERE e.EmployeeCode = N'9788737';
+
+INSERT INTO Users (FullName, Email, PasswordHash, EmailConfirmed, EmployeeId, RoleId)
+SELECT
+    e.FullName,
+    N'nnoskova@hranitelpro.local',
+    CONVERT(NVARCHAR(128), HASHBYTES('SHA2_256', 'AdminDept#2023'), 2),
+    1,
+    e.Id,
+    r.Id
+FROM Employees e
+JOIN Roles r ON r.Name = N'Сотрудник подразделения'
+WHERE e.EmployeeCode = N'9736379';
 GO
 
 -- Pass requests generated from visitor assignments
