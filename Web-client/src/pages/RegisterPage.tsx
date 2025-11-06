@@ -13,7 +13,7 @@ interface RegisterFormValues {
   confirmPassword: string;
 }
 
-const DEFAULT_ROLE_ID = 1; // роль "Guest" по умолчанию
+const DEFAULT_ROLE_ID = 2; // роль "Пользователь" по умолчанию
 
 const schema = yup.object({
   email: yup.string().trim().email('Введите корректный email').required('Email обязателен'),
