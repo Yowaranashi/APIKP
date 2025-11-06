@@ -13,7 +13,7 @@ interface RegisterFormValues {
   confirmPassword: string;
 }
 
-const DEFAULT_ROLE_ID = 2; // роль "Пользователь" по умолчанию
+const VISITOR_ROLE_ID = Number(import.meta.env.VITE_VISITOR_ROLE_ID ?? 5); // роль "Посетитель"
 
 const schema = yup.object({
   email: yup.string().trim().email('Введите корректный email').required('Email обязателен'),
@@ -41,7 +41,7 @@ export const RegisterPage = () => {
         email: values.email,
         fullName: values.fullName.trim(),
         password: values.password,
-        roleId: DEFAULT_ROLE_ID,
+        roleId: VISITOR_ROLE_ID,
       });
 
       navigate('/dashboard');
@@ -52,13 +52,14 @@ export const RegisterPage = () => {
 
   return (
     <section className="mx-auto mt-10 max-w-lg rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-      <h1 className="mb-6 text-2xl font-semibold text-primary">Регистрация</h1>
+      <h1 className="mb-6 text-2xl font-semibold text-primary">Регистрация посетителя</h1>
       <p className="mb-8 text-sm text-slate-500">
-        Создайте учетную запись для подачи заявок на посещение предприятия. Уже есть аккаунт?{' '}
+        Создайте личный кабинет посетителя для подачи заявок и отслеживания статусов. Уже есть аккаунт?{' '}
         <Link to="/login" className="text-primary hover:underline">
           Войдите
         </Link>
         .
+        <br />Используйте рабочий email и придумайте надежный пароль — он понадобится для входа в личный кабинет.
       </p>
       <form className="flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
         <FormInput label="Email" type="email" error={formState.errors.email} {...register('email')} />
