@@ -20,7 +20,7 @@ namespace HranitelPRO.API.Controllers
         }
 
         [HttpPost("visitors")]
-
+        [AllowAnonymous]
         [RequestSizeLimit(10 * 1024 * 1024)]
         public async Task<ActionResult> ImportVisitors([FromForm] FileUploadDto request)
         {
@@ -35,6 +35,7 @@ namespace HranitelPRO.API.Controllers
 
 
         [HttpPost("departments")]
+        [AllowAnonymous]
         [RequestSizeLimit(5 * 1024 * 1024)]
         public async Task<ActionResult> ImportDepartments([FromForm] FileUploadDto request)
         {
@@ -48,6 +49,7 @@ namespace HranitelPRO.API.Controllers
         }
 
         [HttpPost("roles")]
+        [AllowAnonymous]
         [RequestSizeLimit(5 * 1024 * 1024)]
         public async Task<ActionResult> ImportRoles([FromForm] FileUploadDto request)
         {
@@ -61,6 +63,7 @@ namespace HranitelPRO.API.Controllers
         }
 
         [HttpPost("statuses")]
+        [AllowAnonymous]
         [RequestSizeLimit(5 * 1024 * 1024)]
         public async Task<ActionResult> ImportStatuses([FromForm] FileUploadDto request)
         {
@@ -74,6 +77,7 @@ namespace HranitelPRO.API.Controllers
         }
 
         [HttpPost("groups")]
+        [AllowAnonymous]
         [RequestSizeLimit(5 * 1024 * 1024)]
         public async Task<ActionResult> ImportGroups([FromForm] FileUploadDto request)
         {
@@ -87,6 +91,7 @@ namespace HranitelPRO.API.Controllers
         }
 
         [HttpPost("employees")]
+        [AllowAnonymous]
         [RequestSizeLimit(10 * 1024 * 1024)]
         public async Task<ActionResult> ImportEmployees([FromForm] FileUploadDto request)
         {
@@ -100,6 +105,7 @@ namespace HranitelPRO.API.Controllers
         }
 
         [HttpPost("sessions")]
+        [AllowAnonymous]
         [RequestSizeLimit(50 * 1024 * 1024)]
         public async Task<ActionResult> ImportSessions([FromForm] SessionImportDto request)
         {
