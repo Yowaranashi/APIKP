@@ -10,6 +10,7 @@ namespace HranitelPRO.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AllowAnonymous]
     public class ImportController : ControllerBase
     {
         private readonly IExcelImportService _importService;
