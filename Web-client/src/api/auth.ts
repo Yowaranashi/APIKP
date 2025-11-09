@@ -22,7 +22,7 @@ const normalizeEmail = (email: string) => email.trim().toLowerCase();
 export const register = async (payload: RegisterPayload) => {
   const requestBody = {
     ...payload,
-    email: normalizeEmail(payload.email),
+    email: payload.email.trim(),
   };
   const { data } = await axiosClient.post<RegisterResponse>('/api/auth/register', requestBody);
   return data;
@@ -31,7 +31,7 @@ export const register = async (payload: RegisterPayload) => {
 export const login = async (payload: LoginPayload) => {
   const requestBody = {
     ...payload,
-    email: normalizeEmail(payload.email),
+    email: payload.email.trim(),
   };
   const { data } = await axiosClient.post<AuthResponse>('/api/auth/login', requestBody);
   return data;
