@@ -856,8 +856,9 @@ namespace HranitelPRO.API.Controllers
                 var rejectedCount = await _context.PassVisitors
                     .Include(v => v.PassRequest)
                     .Where(v => v.PassportSeries == visitor.PassportSeries && v.PassportNumber == visitor.PassportNumber)
-                    .CountAsync(v => v.PassRequest.RejectionReason != null &&
-                                     v.PassRequest.RejectionReason.Contains("недостоверных", StringComparison.OrdinalIgnoreCase));
+                    .CountAsync(v => v.PassRequest != null &&
+                                     v.PassRequest.RejectionReason != null &&
+                                     EF.Functions.Like(v.PassRequest.RejectionReason, "%недостоверных%"));
 
                 if (rejectedCount < 2)
                 {
