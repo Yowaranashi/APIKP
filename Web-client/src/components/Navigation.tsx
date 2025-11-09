@@ -1,15 +1,51 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useCallback, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import classNames from 'classnames';
+import toast from 'react-hot-toast';
+import { checkHealth } from '../api/health';
 
 export const Navigation = () => {
   const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
+  const [checkingHealth, setCheckingHealth] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const handleCheckApi = useCallback(async () => {
+    setCheckingHealth(true);
+    try {
+      const status = await checkHealth();
+      const databaseMessage = status.database ? 'База данных доступна' : 'База данных недоступна';
+
+      if (status.api?.toLowerCase() === 'ok') {
+        const toastMessage = status.database
+          ? 'API отвечает. База данных доступна.'
+          : 'API отвечает, но база данных недоступна.';
+        status.database ? toast.success(toastMessage) : toast.error(toastMessage);
+      } else {
+        toast.error('API ответил ошибкой. Проверьте подключение.');
+      }
+
+      console.info('[health-check]', {
+        api: status.api,
+        database: status.database,
+        timestamp: status.timestamp,
+        message: status.message,
+        details: databaseMessage,
+      });
+    } catch (error) {
+      const message =
+        (error as any)?.response?.data?.message ?? (error as Error)?.message ?? 'Не удалось связаться с API';
+      toast.error(message);
+      console.error('[health-check:error]', error);
+    } finally {
+      setCheckingHealth(false);
+    }
+  }, []);
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     classNames(
@@ -41,6 +77,14 @@ export const Navigation = () => {
               <NavLink to="/applications/group" className={navLinkClass}>
                 Групповая заявка
               </NavLink>
+              <button
+                type="button"
+                onClick={handleCheckApi}
+                disabled={checkingHealth}
+                className="rounded-md border border-primary px-3 py-1 text-sm font-medium text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {checkingHealth ? 'Проверяем API…' : 'Проверить API'}
+              </button>
               <div className="flex items-center gap-3 pl-4 text-sm text-slate-600">
                 <span className="hidden sm:inline-block">{user?.fullName}</span>
                 <button
@@ -59,6 +103,14 @@ export const Navigation = () => {
               <NavLink to="/register" className={navLinkClass}>
                 Регистрация
               </NavLink>
+              <button
+                type="button"
+                onClick={handleCheckApi}
+                disabled={checkingHealth}
+                className="rounded-md border border-primary px-3 py-1 text-sm font-medium text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {checkingHealth ? 'Проверяем API…' : 'Проверить API'}
+              </button>
             </>
           )}
         </nav>
