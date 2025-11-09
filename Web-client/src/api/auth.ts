@@ -17,12 +17,22 @@ export interface RegisterResponse {
   message: string;
 }
 
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
 export const register = async (payload: RegisterPayload) => {
-  const { data } = await axiosClient.post<RegisterResponse>('/api/auth/register', payload);
+  const requestBody = {
+    ...payload,
+    email: normalizeEmail(payload.email),
+  };
+  const { data } = await axiosClient.post<RegisterResponse>('/api/auth/register', requestBody);
   return data;
 };
 
 export const login = async (payload: LoginPayload) => {
-  const { data } = await axiosClient.post<AuthResponse>('/api/auth/login', payload);
+  const requestBody = {
+    ...payload,
+    email: normalizeEmail(payload.email),
+  };
+  const { data } = await axiosClient.post<AuthResponse>('/api/auth/login', requestBody);
   return data;
 };
