@@ -148,10 +148,7 @@ namespace HranitelPRO.API.Controllers
                 return NotFound();
             }
 
-            if (dto.CheckedByUserId.HasValue)
-            {
-                request.CheckedByUserId = dto.CheckedByUserId.Value;
-            }
+            var checkedByUserId = dto.CheckedByUserId;
 
             // Проверка по черному списку
             var visitorDocuments = request.Visitors?
@@ -167,9 +164,14 @@ namespace HranitelPRO.API.Controllers
 
             if (blacklistedVisitors.Any())
             {
-                request.Status = "Rejected";
-                request.StatusID = await ResolveStatusIdAsync("Rejected");
+                var rejected = await GetOrCreateStatusAsync("Rejected");
+                request.Status = rejected.StatusName;
+                request.StatusID = rejected.StatusId;
                 request.RejectionReason = BlacklistAutoReason;
+                if (checkedByUserId.HasValue)
+                {
+                    request.CheckedByUserId = checkedByUserId.Value;
+                }
                 await CreateNotificationsAsync(request, BlacklistAutoReason);
                 await _context.SaveChangesAsync();
                 return Ok(MapToDetails(request));
@@ -177,9 +179,9 @@ namespace HranitelPRO.API.Controllers
 
             if (dto.Decision.Equals("Approved", StringComparison.OrdinalIgnoreCase))
             {
-                await EnsureApplicationStatusExistsAsync("Approved");
-                request.Status = "Approved";
-                request.StatusID = await ResolveStatusIdAsync("Approved");
+                var approved = await GetOrCreateStatusAsync("Approved");
+                request.Status = approved.StatusName;
+                request.StatusID = approved.StatusId;
 
                 if (dto.VisitStart.HasValue)
                 {
@@ -201,9 +203,9 @@ namespace HranitelPRO.API.Controllers
                     return BadRequest(new { message = "Необходимо указать причину отклонения" });
                 }
 
-                await EnsureApplicationStatusExistsAsync("Rejected");
-                request.Status = "Rejected";
-                request.StatusID = await ResolveStatusIdAsync("Rejected");
+                var rejected = await GetOrCreateStatusAsync("Rejected");
+                request.Status = rejected.StatusName;
+                request.StatusID = rejected.StatusId;
                 request.RejectionReason = dto.RejectionReason;
                 await CreateNotificationsAsync(request, dto.RejectionReason);
 
@@ -215,6 +217,11 @@ namespace HranitelPRO.API.Controllers
             else
             {
                 return BadRequest(new { message = "Неизвестное решение. Используйте Approved или Rejected." });
+            }
+
+            if (checkedByUserId.HasValue)
+            {
+                request.CheckedByUserId = checkedByUserId.Value;
             }
 
             await _context.SaveChangesAsync();
@@ -234,9 +241,14 @@ namespace HranitelPRO.API.Controllers
                 return NotFound();
             }
 
-            await EnsureApplicationStatusExistsAsync(dto.Status);
-            request.Status = dto.Status;
-            request.StatusID = await ResolveStatusIdAsync(dto.Status);
+            if (string.IsNullOrWhiteSpace(dto.Status))
+            {
+                return BadRequest(new { message = "Укажите новый статус заявки." });
+            }
+
+            var status = await GetOrCreateStatusAsync(dto.Status);
+            request.Status = status.StatusName;
+            request.StatusID = status.StatusId;
             request.RejectionReason = dto.RejectionReason;
 
             await _context.SaveChangesAsync();
@@ -252,7 +264,7 @@ namespace HranitelPRO.API.Controllers
             }
 
             var normalizedType = NormalizeRequestType(dto.RequestType);
-            await EnsureApplicationStatusExistsAsync("Pending");
+            var pendingStatus = await GetOrCreateStatusAsync("Pending");
 
             var request = new PassRequest
             {
@@ -274,8 +286,8 @@ namespace HranitelPRO.API.Controllers
                 PassportSeries = dto.PassportSeries,
                 PassportNumber = dto.PassportNumber,
                 GroupSize = dto.GroupSize ?? dto.ExpectedVisitorCount,
-                Status = "Pending",
-                StatusID = await ResolveStatusIdAsync("Pending"),
+                Status = pendingStatus.StatusName,
+                StatusID = pendingStatus.StatusId,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -806,23 +818,27 @@ namespace HranitelPRO.API.Controllers
             return parts.Count == 0 ? null : string.Join(' ', parts);
         }
 
-        private async Task EnsureApplicationStatusExistsAsync(string status)
+        private async Task<(string StatusName, int StatusId)> GetOrCreateStatusAsync(string statusName)
         {
-            if (await _context.ApplicationStatuses.AnyAsync(s => s.StatusName == status))
+            if (string.IsNullOrWhiteSpace(statusName))
             {
-                return;
+                throw new ArgumentException("Статус не может быть пустым.", nameof(statusName));
             }
 
-            _context.ApplicationStatuses.Add(new ApplicationStatus { StatusName = status });
-            await _context.SaveChangesAsync();
-        }
+            var resolved = statusName.Trim();
 
-        private Task<int> ResolveStatusIdAsync(string status)
-        {
-            return _context.ApplicationStatuses
-                .Where(s => s.StatusName == status)
-                .Select(s => s.StatusID)
-                .FirstAsync();
+            var existing = await _context.ApplicationStatuses
+                .FirstOrDefaultAsync(s => s.StatusName == resolved);
+
+            if (existing != null)
+            {
+                return (existing.StatusName, existing.StatusID);
+            }
+
+            var created = new ApplicationStatus { StatusName = resolved };
+            _context.ApplicationStatuses.Add(created);
+            await _context.SaveChangesAsync();
+            return (created.StatusName, created.StatusID);
         }
 
         private Task CreateNotificationsAsync(PassRequest request, string message)
