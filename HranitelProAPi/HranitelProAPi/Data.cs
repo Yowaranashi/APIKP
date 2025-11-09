@@ -113,12 +113,12 @@ namespace HranitelPro.API.Data
                 .HasForeignKey(b => b.AddedByEmployeeId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Employee - Department
+            // Employee - Department (match SQL schema foreign key behavior)
             modelBuilder.Entity<Employee>()
                 .HasOne(e => e.Department)
                 .WithMany(d => d.Employees)
                 .HasForeignKey(e => e.DepartmentId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
 
             // VisitRecord relationships
             modelBuilder.Entity<VisitRecord>()
@@ -166,12 +166,6 @@ namespace HranitelPro.API.Data
                 .WithMany()
                 .HasForeignKey(a => a.PassRequestId)
                 .OnDelete(DeleteBehavior.SetNull);
-
-            modelBuilder.Entity<Employee>()
-                .HasOne(e => e.Department)
-                .WithMany()
-                .HasForeignKey(e => e.DepartmentId)
-                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<PassRequest>()
                 .HasOne<ApplicationStatus>()
