@@ -147,7 +147,7 @@ namespace HranitelPRO.API.Models
         public string? PassportSeries { get; set; }
         [MaxLength(10)]
         public string? PassportNumber { get; set; }
-        [MaxLength(5000)]
+        [MaxLength(4000)]
         public string Reason { get; set; } = null!;
         public DateTime AddedAt { get; set; } = DateTime.UtcNow;
         public int? AddedByEmployeeId { get; set; }
