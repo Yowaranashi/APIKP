@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -41,7 +42,8 @@ namespace HranitelPRO.API.Controllers
                 return BadRequest(new { message = "Заполните все обязательные поля" });
             }
 
-            if (!TryNormalizeEmail(dto.Email, out var normalizedEmail))
+            var normalizedEmail = NormalizeEmail(dto.Email);
+            if (string.IsNullOrEmpty(normalizedEmail))
             {
                 return BadRequest(new { message = "Неверный формат email" });
             }
@@ -92,7 +94,8 @@ namespace HranitelPRO.API.Controllers
                 return Unauthorized(new { message = "Неверный email или пароль" });
             }
 
-            if (!TryNormalizeEmail(dto.Email, out var normalizedEmail))
+            var normalizedEmail = NormalizeEmail(dto.Email);
+            if (string.IsNullOrEmpty(normalizedEmail))
             {
                 return Unauthorized(new { message = "Неверный email или пароль" });
             }
@@ -147,8 +150,11 @@ namespace HranitelPRO.API.Controllers
 
         private static string HashPassword(string password)
         {
-            return $"BCRYPT::{BCrypt.Net.BCrypt.HashPassword(password)}";
-        }
+            if (string.IsNullOrWhiteSpace(storedHash))
+                return (false, false);
+
+            if (string.IsNullOrEmpty(password))
+                return (false, false);
 
         private static (bool IsValid, bool ShouldUpgrade) VerifyPassword(string password, string storedHash)
         {
@@ -158,6 +164,26 @@ namespace HranitelPRO.API.Controllers
             }
 
             var trimmedHash = storedHash.Trim();
+
+        private static string? NormalizeEmail(string? email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return null;
+
+            var trimmed = email.Trim();
+
+            try
+            {
+                var mailAddress = new MailAddress(trimmed);
+                var localPart = mailAddress.User.Normalize();
+                var domainPart = mailAddress.Host.Normalize();
+                return $"{localPart}@{domainPart}".ToLowerInvariant();
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+        }
 
             if (trimmedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
             {
@@ -216,23 +242,18 @@ namespace HranitelPRO.API.Controllers
             return true;
         }
 
-        private static bool TryNormalizeEmail(string? email, out string normalized)
+        private static string NormalizeEmail(string email)
         {
-            normalized = string.Empty;
-            if (string.IsNullOrWhiteSpace(email))
-            {
-                return false;
-            }
+            var trimmed = email.Trim();
 
             try
             {
-                var mailAddress = new MailAddress(email.Trim());
-                normalized = mailAddress.Address.ToLowerInvariant();
-                return true;
+                var mailAddress = new MailAddress(trimmed);
+                return mailAddress.Address.ToLowerInvariant();
             }
             catch (FormatException)
             {
-                return false;
+                return string.Empty;
             }
         }
 
