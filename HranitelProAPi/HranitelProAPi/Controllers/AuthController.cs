@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using System.Linq;
 
 namespace HranitelPRO.API.Controllers
 {
@@ -150,11 +150,15 @@ namespace HranitelPRO.API.Controllers
 
         private static string HashPassword(string password)
         {
-            if (string.IsNullOrWhiteSpace(storedHash))
-                return (false, false);
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                throw new ArgumentException("Password cannot be empty.", nameof(password));
+            }
 
-            if (string.IsNullOrEmpty(password))
-                return (false, false);
+            var normalized = password.Trim();
+            var hash = BCrypt.Net.BCrypt.HashPassword(normalized);
+            return $"BCRYPT::{hash}";
+        }
 
         private static (bool IsValid, bool ShouldUpgrade) VerifyPassword(string password, string storedHash)
         {
@@ -165,10 +169,45 @@ namespace HranitelPRO.API.Controllers
 
             var trimmedHash = storedHash.Trim();
 
+            if (trimmedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
+            {
+                var bcryptHash = trimmedHash.Substring("BCRYPT::".Length);
+
+                try
+                {
+                    var isValid = BCrypt.Net.BCrypt.Verify(password, bcryptHash);
+                    return (isValid, false);
+                }
+                catch
+                {
+                    return (false, false);
+                }
+            }
+
+            if (trimmedHash.StartsWith("SHA256::", StringComparison.OrdinalIgnoreCase))
+            {
+                var shaHash = trimmedHash.Substring("SHA256::".Length);
+                var computed = ComputeSha256Hex(password);
+                var isValid = string.Equals(computed, shaHash, StringComparison.OrdinalIgnoreCase);
+                return (isValid, isValid);
+            }
+
+            if (LooksLikeSha256(trimmedHash))
+            {
+                var computed = ComputeSha256Hex(password);
+                var isValid = string.Equals(computed, trimmedHash, StringComparison.OrdinalIgnoreCase);
+                return (isValid, isValid);
+            }
+
+            return (false, false);
+        }
+
         private static string? NormalizeEmail(string? email)
         {
             if (string.IsNullOrWhiteSpace(email))
+            {
                 return null;
+            }
 
             var trimmed = email.Trim();
 
@@ -183,42 +222,6 @@ namespace HranitelPRO.API.Controllers
             {
                 return null;
             }
-        }
-
-            if (trimmedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
-            {
-                trimmedHash = trimmedHash.Substring("BCRYPT::".Length);
-            }
-
-            if (trimmedHash.StartsWith("$2", StringComparison.Ordinal))
-            {
-                try
-                {
-                    var isValid = BCrypt.Net.BCrypt.Verify(password, trimmedHash);
-                    return (isValid, false);
-                }
-                catch
-                {
-                    return (false, false);
-                }
-            }
-
-            if (trimmedHash.StartsWith("SHA256::", StringComparison.OrdinalIgnoreCase))
-            {
-                trimmedHash = trimmedHash.Substring("SHA256::".Length);
-                var computed = ComputeSha256Hex(password);
-                var isValid = string.Equals(computed, trimmedHash, StringComparison.OrdinalIgnoreCase);
-                return (isValid, isValid);
-            }
-
-            if (LooksLikeSha256(trimmedHash))
-            {
-                var computed = ComputeSha256Hex(password);
-                var isValid = string.Equals(computed, trimmedHash, StringComparison.OrdinalIgnoreCase);
-                return (isValid, isValid);
-            }
-
-            return (false, false);
         }
 
         private static bool LooksLikeSha256(string value)
@@ -240,21 +243,6 @@ namespace HranitelPRO.API.Controllers
             }
 
             return true;
-        }
-
-        private static string NormalizeEmail(string email)
-        {
-            var trimmed = email.Trim();
-
-            try
-            {
-                var mailAddress = new MailAddress(trimmed);
-                return mailAddress.Address.ToLowerInvariant();
-            }
-            catch (FormatException)
-            {
-                return string.Empty;
-            }
         }
 
         private static string ComputeSha256Hex(string value)
