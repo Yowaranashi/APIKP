@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -149,8 +150,11 @@ namespace HranitelPRO.API.Controllers
 
         private static string HashPassword(string password)
         {
-            return $"BCRYPT::{BCrypt.Net.BCrypt.HashPassword(password)}";
-        }
+            if (string.IsNullOrWhiteSpace(storedHash))
+                return (false, false);
+
+            if (string.IsNullOrEmpty(password))
+                return (false, false);
 
         private static (bool IsValid, bool ShouldUpgrade) VerifyPassword(string password, string storedHash)
         {
@@ -161,10 +165,30 @@ namespace HranitelPRO.API.Controllers
 
             var trimmedHash = storedHash.Trim();
 
-            if (trimmedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
+        private static string? NormalizeEmail(string? email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return null;
+
+            var trimmed = email.Trim();
+
+            try
             {
-                trimmedHash = trimmedHash.Substring("BCRYPT::".Length);
+                var mailAddress = new MailAddress(trimmed);
+                var localPart = mailAddress.User.Normalize();
+                var domainPart = mailAddress.Host.Normalize();
+                return $"{localPart}@{domainPart}".ToLowerInvariant();
             }
+            catch (FormatException)
+            {
+                return null;
+            }
+        }
+
+        private static (PasswordAlgorithm Algorithm, string Hash) ParseAlgorithm(string storedHash)
+        {
+            if (storedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
+                return (PasswordAlgorithm.Bcrypt, storedHash.Substring("BCRYPT::".Length));
 
             if (trimmedHash.StartsWith("$2", StringComparison.Ordinal))
             {
