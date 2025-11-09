@@ -185,10 +185,10 @@ namespace HranitelPRO.API.Controllers
             }
         }
 
-        private static (PasswordAlgorithm Algorithm, string Hash) ParseAlgorithm(string storedHash)
-        {
-            if (storedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
-                return (PasswordAlgorithm.Bcrypt, storedHash.Substring("BCRYPT::".Length));
+            if (trimmedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
+            {
+                trimmedHash = trimmedHash.Substring("BCRYPT::".Length);
+            }
 
             if (trimmedHash.StartsWith("$2", StringComparison.Ordinal))
             {
