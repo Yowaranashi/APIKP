@@ -1,15 +1,16 @@
 using HranitelPro.API.Data;
 using HranitelPRO.API.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Linq;
 
 namespace HranitelPRO.API.Controllers
 {
@@ -31,21 +32,48 @@ namespace HranitelPRO.API.Controllers
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
             if (dto == null)
+            {
                 return BadRequest(new { message = "Некорректные данные" });
+            }
 
-            var normalizedEmail = NormalizeEmail(dto.Email);
-            if (string.IsNullOrEmpty(normalizedEmail))
-                return BadRequest(new { message = "Email обязателен" });
+            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password) || string.IsNullOrWhiteSpace(dto.FullName))
+            {
+                return BadRequest(new { message = "Заполните все обязательные поля" });
+            }
 
-            if (await _context.Users.AnyAsync(u => u.Email == normalizedEmail))
+            if (!TryNormalizeEmail(dto.Email, out var normalizedEmail))
+            {
+                return BadRequest(new { message = "Неверный формат email" });
+            }
+
+            var emailAlreadyExists = await _context.Users
+                .AnyAsync(u => u.Email.ToLower() == normalizedEmail);
+
+            if (emailAlreadyExists)
+            {
                 return BadRequest(new { message = "Пользователь с таким email уже существует" });
+            }
+
+            var role = await _context.Roles.FindAsync(dto.RoleId);
+            if (role == null)
+            {
+                role = await _context.Roles
+                    .OrderBy(r => r.Id)
+                    .FirstOrDefaultAsync(r => r.Name == "Посетитель");
+
+                if (role == null)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError,
+                        new { message = "Базовая роль посетителя не найдена" });
+                }
+            }
 
             var user = new User
             {
-                FullName = dto.FullName,
+                FullName = dto.FullName.Trim(),
                 Email = normalizedEmail,
-                PasswordHash = FormatBcryptHash(BCrypt.Net.BCrypt.HashPassword(dto.Password)),
-                RoleId = dto.RoleId,
+                PasswordHash = HashPassword(dto.Password),
+                RoleId = role.Id,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -59,35 +87,47 @@ namespace HranitelPRO.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            if (dto == null)
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
+            {
                 return Unauthorized(new { message = "Неверный email или пароль" });
+            }
 
-            var normalizedEmail = NormalizeEmail(dto.Email);
-            if (string.IsNullOrEmpty(normalizedEmail))
+            if (!TryNormalizeEmail(dto.Email, out var normalizedEmail))
+            {
                 return Unauthorized(new { message = "Неверный email или пароль" });
+            }
 
             var user = await _context.Users
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
             if (user == null)
             {
-                var loweredEmail = normalizedEmail.ToLowerInvariant();
-                user = await _context.Users
-                    .Include(u => u.Role)
-                    .FirstOrDefaultAsync(u => u.Email.ToLower() == loweredEmail);
+                return Unauthorized(new { message = "Неверный email или пароль" });
             }
 
-            if (user == null)
-                return Unauthorized(new { message = "Неверный email или пароль" });
-
-            var passwordCheck = VerifyPassword(user.PasswordHash, dto.Password);
+            var passwordCheck = VerifyPassword(dto.Password, user.PasswordHash);
             if (!passwordCheck.IsValid)
+            {
                 return Unauthorized(new { message = "Неверный email или пароль" });
+            }
+
+            var shouldSave = false;
+
+            if (!string.Equals(user.Email, normalizedEmail, StringComparison.Ordinal))
+            {
+                user.Email = normalizedEmail;
+                shouldSave = true;
+            }
 
             if (passwordCheck.ShouldUpgrade)
             {
-                user.PasswordHash = FormatBcryptHash(BCrypt.Net.BCrypt.HashPassword(dto.Password));
+                user.PasswordHash = HashPassword(dto.Password);
+                shouldSave = true;
+            }
+
+            if (shouldSave)
+            {
                 await _context.SaveChangesAsync();
             }
 
@@ -100,88 +140,107 @@ namespace HranitelPRO.API.Controllers
                     user.Id,
                     user.FullName,
                     user.Email,
-                    Role = user.Role.Name
+                    Role = user.Role?.Name
                 }
             });
         }
 
-        private static (bool IsValid, bool ShouldUpgrade) VerifyPassword(string storedHash, string password)
+        private static string HashPassword(string password)
         {
-            if (string.IsNullOrWhiteSpace(storedHash))
-                return (false, false);
-                
-            if (string.IsNullOrEmpty(password))
-                return (false, false);
+            return $"BCRYPT::{BCrypt.Net.BCrypt.HashPassword(password)}";
+        }
 
-            var normalizedHash = storedHash.Trim();
-            var (algorithm, hashPayload) = ParseAlgorithm(normalizedHash);
-
-            switch (algorithm)
+        private static (bool IsValid, bool ShouldUpgrade) VerifyPassword(string password, string storedHash)
+        {
+            if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(storedHash))
             {
-                case PasswordAlgorithm.Bcrypt:
-                    {
-                        var isValid = BCrypt.Net.BCrypt.Verify(password, hashPayload);
-                        return (isValid, false);
-                    }
-                case PasswordAlgorithm.Sha256:
-                    {
-                        var computed = ComputeSha256Hex(password);
-                        var isValid = string.Equals(computed, hashPayload, StringComparison.OrdinalIgnoreCase);
-                        return (isValid, isValid);
-                    }
-                default:
+                return (false, false);
+            }
+
+            var trimmedHash = storedHash.Trim();
+
+            if (trimmedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
+            {
+                trimmedHash = trimmedHash.Substring("BCRYPT::".Length);
+            }
+
+            if (trimmedHash.StartsWith("$2", StringComparison.Ordinal))
+            {
+                try
+                {
+                    var isValid = BCrypt.Net.BCrypt.Verify(password, trimmedHash);
+                    return (isValid, false);
+                }
+                catch
+                {
                     return (false, false);
+                }
             }
-        }
 
-        private static string FormatBcryptHash(string bcryptHash) => $"BCRYPT::{bcryptHash}";
-
-        private static (PasswordAlgorithm Algorithm, string Hash) ParseAlgorithm(string storedHash)
-        {
-            if (storedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
-                return (PasswordAlgorithm.Bcrypt, storedHash.Substring("BCRYPT::".Length));
-
-            if (storedHash.StartsWith("SHA256::", StringComparison.OrdinalIgnoreCase))
-                return (PasswordAlgorithm.Sha256, storedHash.Substring("SHA256::".Length));
-
-            if (storedHash.StartsWith("$2", StringComparison.Ordinal))
-                return (PasswordAlgorithm.Bcrypt, storedHash);
-
-            if (IsSha256Hash(storedHash))
-                return (PasswordAlgorithm.Sha256, storedHash);
-
-            return (PasswordAlgorithm.Unknown, storedHash);
-        }
-
-        private static bool IsSha256Hash(string hash) => hash.Length == 64 && hash.All(IsHexChar);
-
-        private static bool IsHexChar(char c) =>
-            (c >= '0' && c <= '9') ||
-            (c >= 'a' && c <= 'f') ||
-            (c >= 'A' && c <= 'F');
-
-        private static string ComputeSha256Hex(string input)
-        {
-            var bytes = Encoding.UTF8.GetBytes(input);
-            var hashBytes = SHA256.HashData(bytes);
-            return ConvertToHex(hashBytes);
-        }
-
-        private static string ConvertToHex(byte[] bytes)
-        {
-            var builder = new StringBuilder(bytes.Length * 2);
-            foreach (var b in bytes)
+            if (trimmedHash.StartsWith("SHA256::", StringComparison.OrdinalIgnoreCase))
             {
-                builder.Append(b.ToString("X2", CultureInfo.InvariantCulture));
+                trimmedHash = trimmedHash.Substring("SHA256::".Length);
+                var computed = ComputeSha256Hex(password);
+                var isValid = string.Equals(computed, trimmedHash, StringComparison.OrdinalIgnoreCase);
+                return (isValid, isValid);
             }
-            return builder.ToString();
+
+            if (LooksLikeSha256(trimmedHash))
+            {
+                var computed = ComputeSha256Hex(password);
+                var isValid = string.Equals(computed, trimmedHash, StringComparison.OrdinalIgnoreCase);
+                return (isValid, isValid);
+            }
+
+            return (false, false);
         }
 
-        private enum PasswordAlgorithm
+        private static bool LooksLikeSha256(string value)
         {
-            Unknown,
-            Bcrypt,
-            Sha256
+            if (value.Length != 64)
+            {
+                return false;
+            }
+
+            foreach (var ch in value)
+            {
+                var isDigit = ch >= '0' && ch <= '9';
+                var isUpper = ch >= 'A' && ch <= 'F';
+                var isLower = ch >= 'a' && ch <= 'f';
+                if (!isDigit && !isUpper && !isLower)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool TryNormalizeEmail(string? email, out string normalized)
+        {
+            normalized = string.Empty;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return false;
+            }
+
+            try
+            {
+                var mailAddress = new MailAddress(email.Trim());
+                normalized = mailAddress.Address.ToLowerInvariant();
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+        }
+
+        private static string ComputeSha256Hex(string value)
+        {
+            var bytes = Encoding.UTF8.GetBytes(value);
+            var hashBytes = SHA256.HashData(bytes);
+            return Convert.ToHexString(hashBytes);
         }
 
         // 🔒 Генерация JWT токена
@@ -194,7 +253,7 @@ namespace HranitelPRO.API.Controllers
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Email),
                 new Claim("id", user.Id.ToString()),
-                new Claim("role", user.Role.Name)
+                new Claim("role", user.Role?.Name ?? string.Empty)
             };
 
             var token = new JwtSecurityToken(
