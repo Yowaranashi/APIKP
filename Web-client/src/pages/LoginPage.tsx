@@ -11,7 +11,7 @@ interface LoginFormValues {
 }
 
 const schema = yup.object({
-  email: yup.string().email('Введите корректный email').required('Email обязателен'),
+  email: yup.string().trim().email('Введите корректный email').required('Email обязателен'),
   password: yup.string().required('Введите пароль'),
 });
 
@@ -24,7 +24,10 @@ export const LoginPage = () => {
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
-      await login(values);
+      await login({
+        email: values.email.trim(),
+        password: values.password,
+      });
       navigate('/dashboard');
     } catch (error) {
       // Ошибка уже обработана в AuthProvider
