@@ -30,13 +30,20 @@ namespace HranitelPRO.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
+            if (dto == null)
+                return BadRequest(new { message = "Некорректные данные" });
+
+            var normalizedEmail = NormalizeEmail(dto.Email);
+            if (string.IsNullOrEmpty(normalizedEmail))
+                return BadRequest(new { message = "Email обязателен" });
+
+            if (await _context.Users.AnyAsync(u => u.Email == normalizedEmail))
                 return BadRequest(new { message = "Пользователь с таким email уже существует" });
 
             var user = new User
             {
                 FullName = dto.FullName,
-                Email = dto.Email,
+                Email = normalizedEmail,
                 PasswordHash = FormatBcryptHash(BCrypt.Net.BCrypt.HashPassword(dto.Password)),
                 RoleId = dto.RoleId,
                 CreatedAt = DateTime.UtcNow
@@ -52,9 +59,24 @@ namespace HranitelPRO.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
+            if (dto == null)
+                return Unauthorized(new { message = "Неверный email или пароль" });
+
+            var normalizedEmail = NormalizeEmail(dto.Email);
+            if (string.IsNullOrEmpty(normalizedEmail))
+                return Unauthorized(new { message = "Неверный email или пароль" });
+
             var user = await _context.Users
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Email == dto.Email);
+                .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+
+            if (user == null)
+            {
+                var loweredEmail = normalizedEmail.ToLowerInvariant();
+                user = await _context.Users
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == loweredEmail);
+            }
 
             if (user == null)
                 return Unauthorized(new { message = "Неверный email или пароль" });
@@ -87,7 +109,12 @@ namespace HranitelPRO.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(storedHash))
                 return (false, false);
-            var (algorithm, hashPayload) = ParseAlgorithm(storedHash);
+                
+            if (string.IsNullOrEmpty(password))
+                return (false, false);
+
+            var normalizedHash = storedHash.Trim();
+            var (algorithm, hashPayload) = ParseAlgorithm(normalizedHash);
 
             switch (algorithm)
             {
