@@ -152,7 +152,7 @@ CREATE TABLE BlacklistEntries (
     MiddleName NVARCHAR(100) NULL,
     PassportSeries NVARCHAR(10) NULL,
     PassportNumber NVARCHAR(10) NULL,
-    Reason NVARCHAR(5000) NOT NULL,
+    Reason NVARCHAR(4000) NOT NULL,
     AddedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     AddedByEmployeeId INT NULL,
     ReasonID INT NULL,
