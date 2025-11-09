@@ -33,12 +33,11 @@ namespace HranitelPRO.API.Controllers
             if (dto == null)
                 return BadRequest(new { message = "Некорректные данные" });
 
-            if (!TryNormalizeEmail(dto.Email, out var normalizedEmail, out var loweredEmail))
+            var normalizedEmail = NormalizeEmail(dto.Email);
+            if (string.IsNullOrEmpty(normalizedEmail))
                 return BadRequest(new { message = "Email обязателен" });
 
-            var duplicateExists = await _context.Users.AnyAsync(u =>
-                u.Email == normalizedEmail || u.Email.ToLower() == loweredEmail);
-            if (duplicateExists)
+            if (await _context.Users.AnyAsync(u => u.Email == normalizedEmail))
                 return BadRequest(new { message = "Пользователь с таким email уже существует" });
 
             var user = new User
@@ -63,7 +62,8 @@ namespace HranitelPRO.API.Controllers
             if (dto == null)
                 return Unauthorized(new { message = "Неверный email или пароль" });
 
-            if (!TryNormalizeEmail(dto.Email, out var normalizedEmail, out var loweredEmail))
+            var normalizedEmail = NormalizeEmail(dto.Email);
+            if (string.IsNullOrEmpty(normalizedEmail))
                 return Unauthorized(new { message = "Неверный email или пароль" });
 
             var user = await _context.Users
@@ -72,6 +72,7 @@ namespace HranitelPRO.API.Controllers
 
             if (user == null)
             {
+                var loweredEmail = normalizedEmail.ToLowerInvariant();
                 user = await _context.Users
                     .Include(u => u.Role)
                     .FirstOrDefaultAsync(u => u.Email.ToLower() == loweredEmail);
@@ -104,25 +105,11 @@ namespace HranitelPRO.API.Controllers
             });
         }
 
-        private static bool TryNormalizeEmail(string? email, out string normalized, out string lowered)
-        {
-            if (string.IsNullOrWhiteSpace(email))
-            {
-                normalized = string.Empty;
-                lowered = string.Empty;
-                return false;
-            }
-
-            normalized = email.Trim();
-            lowered = normalized.ToLowerInvariant();
-            return true;
-        }
-
         private static (bool IsValid, bool ShouldUpgrade) VerifyPassword(string storedHash, string password)
         {
             if (string.IsNullOrWhiteSpace(storedHash))
                 return (false, false);
-
+                
             if (string.IsNullOrEmpty(password))
                 return (false, false);
 
@@ -151,24 +138,19 @@ namespace HranitelPRO.API.Controllers
 
         private static (PasswordAlgorithm Algorithm, string Hash) ParseAlgorithm(string storedHash)
         {
-            var hash = storedHash.Trim();
+            if (storedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
+                return (PasswordAlgorithm.Bcrypt, storedHash.Substring("BCRYPT::".Length));
 
-            if (hash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
-                return (PasswordAlgorithm.Bcrypt, hash.Substring("BCRYPT::".Length));
+            if (storedHash.StartsWith("SHA256::", StringComparison.OrdinalIgnoreCase))
+                return (PasswordAlgorithm.Sha256, storedHash.Substring("SHA256::".Length));
 
-            if (hash.StartsWith("SHA256::", StringComparison.OrdinalIgnoreCase))
-                return (PasswordAlgorithm.Sha256, hash.Substring("SHA256::".Length));
+            if (storedHash.StartsWith("$2", StringComparison.Ordinal))
+                return (PasswordAlgorithm.Bcrypt, storedHash);
 
-            if (hash.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && hash.Length == 66 && IsSha256Hash(hash.Substring(2)))
-                return (PasswordAlgorithm.Sha256, hash.Substring(2));
+            if (IsSha256Hash(storedHash))
+                return (PasswordAlgorithm.Sha256, storedHash);
 
-            if (hash.StartsWith("$2", StringComparison.Ordinal))
-                return (PasswordAlgorithm.Bcrypt, hash);
-
-            if (IsSha256Hash(hash))
-                return (PasswordAlgorithm.Sha256, hash);
-
-            return (PasswordAlgorithm.Unknown, hash);
+            return (PasswordAlgorithm.Unknown, storedHash);
         }
 
         private static bool IsSha256Hash(string hash) => hash.Length == 64 && hash.All(IsHexChar);

@@ -427,14 +427,6 @@ GO
 ------------------------------------------------------------
 -- Normalize legacy SHA256 hashes to include algorithm prefix
 UPDATE Users
-SET Email = LTRIM(RTRIM(Email))
-WHERE Email <> LTRIM(RTRIM(Email));
-
-UPDATE Users
-SET PasswordHash = SUBSTRING(PasswordHash, 3, LEN(PasswordHash) - 2)
-WHERE PasswordHash LIKE N'0x%' AND LEN(PasswordHash) = 66;
-
-UPDATE Users
 SET PasswordHash = N'SHA256::' + PasswordHash
 WHERE PasswordHash NOT LIKE N'SHA256::%' AND LEN(PasswordHash) = 64;
 GO
