@@ -4,8 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace HranitelPRO.API.Controllers
@@ -34,7 +37,7 @@ namespace HranitelPRO.API.Controllers
             {
                 FullName = dto.FullName,
                 Email = dto.Email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                PasswordHash = FormatBcryptHash(BCrypt.Net.BCrypt.HashPassword(dto.Password)),
                 RoleId = dto.RoleId,
                 CreatedAt = DateTime.UtcNow
             };
@@ -53,8 +56,18 @@ namespace HranitelPRO.API.Controllers
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+            if (user == null)
                 return Unauthorized(new { message = "Неверный email или пароль" });
+
+            var passwordCheck = VerifyPassword(user.PasswordHash, dto.Password);
+            if (!passwordCheck.IsValid)
+                return Unauthorized(new { message = "Неверный email или пароль" });
+
+            if (passwordCheck.ShouldUpgrade)
+            {
+                user.PasswordHash = FormatBcryptHash(BCrypt.Net.BCrypt.HashPassword(dto.Password));
+                await _context.SaveChangesAsync();
+            }
 
             var token = GenerateJwtToken(user);
             return Ok(new
@@ -68,6 +81,80 @@ namespace HranitelPRO.API.Controllers
                     Role = user.Role.Name
                 }
             });
+        }
+
+        private static (bool IsValid, bool ShouldUpgrade) VerifyPassword(string storedHash, string password)
+        {
+            if (string.IsNullOrWhiteSpace(storedHash))
+                return (false, false);
+            var (algorithm, hashPayload) = ParseAlgorithm(storedHash);
+
+            switch (algorithm)
+            {
+                case PasswordAlgorithm.Bcrypt:
+                    {
+                        var isValid = BCrypt.Net.BCrypt.Verify(password, hashPayload);
+                        return (isValid, false);
+                    }
+                case PasswordAlgorithm.Sha256:
+                    {
+                        var computed = ComputeSha256Hex(password);
+                        var isValid = string.Equals(computed, hashPayload, StringComparison.OrdinalIgnoreCase);
+                        return (isValid, isValid);
+                    }
+                default:
+                    return (false, false);
+            }
+        }
+
+        private static string FormatBcryptHash(string bcryptHash) => $"BCRYPT::{bcryptHash}";
+
+        private static (PasswordAlgorithm Algorithm, string Hash) ParseAlgorithm(string storedHash)
+        {
+            if (storedHash.StartsWith("BCRYPT::", StringComparison.OrdinalIgnoreCase))
+                return (PasswordAlgorithm.Bcrypt, storedHash.Substring("BCRYPT::".Length));
+
+            if (storedHash.StartsWith("SHA256::", StringComparison.OrdinalIgnoreCase))
+                return (PasswordAlgorithm.Sha256, storedHash.Substring("SHA256::".Length));
+
+            if (storedHash.StartsWith("$2", StringComparison.Ordinal))
+                return (PasswordAlgorithm.Bcrypt, storedHash);
+
+            if (IsSha256Hash(storedHash))
+                return (PasswordAlgorithm.Sha256, storedHash);
+
+            return (PasswordAlgorithm.Unknown, storedHash);
+        }
+
+        private static bool IsSha256Hash(string hash) => hash.Length == 64 && hash.All(IsHexChar);
+
+        private static bool IsHexChar(char c) =>
+            (c >= '0' && c <= '9') ||
+            (c >= 'a' && c <= 'f') ||
+            (c >= 'A' && c <= 'F');
+
+        private static string ComputeSha256Hex(string input)
+        {
+            var bytes = Encoding.UTF8.GetBytes(input);
+            var hashBytes = SHA256.HashData(bytes);
+            return ConvertToHex(hashBytes);
+        }
+
+        private static string ConvertToHex(byte[] bytes)
+        {
+            var builder = new StringBuilder(bytes.Length * 2);
+            foreach (var b in bytes)
+            {
+                builder.Append(b.ToString("X2", CultureInfo.InvariantCulture));
+            }
+            return builder.ToString();
+        }
+
+        private enum PasswordAlgorithm
+        {
+            Unknown,
+            Bcrypt,
+            Sha256
         }
 
         // 🔒 Генерация JWT токена
