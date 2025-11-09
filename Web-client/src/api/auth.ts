@@ -17,6 +17,8 @@ export interface RegisterResponse {
   message: string;
 }
 
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
 export const register = async (payload: RegisterPayload) => {
   const requestBody = {
     ...payload,
