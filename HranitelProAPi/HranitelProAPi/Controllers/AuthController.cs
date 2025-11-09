@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -109,7 +110,7 @@ namespace HranitelPRO.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(storedHash))
                 return (false, false);
-                
+
             if (string.IsNullOrEmpty(password))
                 return (false, false);
 
@@ -135,6 +136,26 @@ namespace HranitelPRO.API.Controllers
         }
 
         private static string FormatBcryptHash(string bcryptHash) => $"BCRYPT::{bcryptHash}";
+
+        private static string? NormalizeEmail(string? email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return null;
+
+            var trimmed = email.Trim();
+
+            try
+            {
+                var mailAddress = new MailAddress(trimmed);
+                var localPart = mailAddress.User.Normalize();
+                var domainPart = mailAddress.Host.Normalize();
+                return $"{localPart}@{domainPart}".ToLowerInvariant();
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+        }
 
         private static (PasswordAlgorithm Algorithm, string Hash) ParseAlgorithm(string storedHash)
         {
