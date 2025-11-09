@@ -168,9 +168,9 @@ namespace HranitelPro.API.Data
                 .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<PassRequest>()
-                .HasOne<ApplicationStatus>()
+                .HasOne(p => p.StatusRef)
                 .WithMany()
-                .HasForeignKey("StatusID")
+                .HasForeignKey(p => p.StatusID)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<FileAttachment>()
